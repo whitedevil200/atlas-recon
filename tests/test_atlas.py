@@ -78,7 +78,7 @@ class Tests(unittest.TestCase):
         with patch.dict(atlas.os.environ, {}, clear=True), contextlib.redirect_stdout(Terminal()) as display:
             atlas.say('test', 35)
             self.assertIn('\033[35m', display.getvalue())
-        with patch.dict(atlas.os.environ, {'NO_COLOR': '1'}), contextlib.redirect_stdout(Terminal()) as display:
+        with patch.dict(atlas.os.environ, {'NO_COLOR': '1'}, clear=True), contextlib.redirect_stdout(Terminal()) as display:
             atlas.say('test', 35)
             self.assertNotIn('\033', display.getvalue())
 
