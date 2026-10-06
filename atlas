@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ATLAS_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -x "$ATLAS_ROOT/.venv/bin/python" ]]; then
+  ATLAS_PYTHON="$ATLAS_ROOT/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+  ATLAS_PYTHON="$(command -v python3)"
+else
+  ATLAS_PYTHON="$(command -v python)"
+fi
+
+# Color is on by default for the interactive menu. Explicit opt-outs remain available.
+if [[ -z "${NO_COLOR+x}" && "${ATLAS_COLOR:-}" != "never" ]]; then
+  export ATLAS_COLOR="${ATLAS_COLOR:-always}"
+  ATLAS_MAGENTA=$'\e[1;95m'; ATLAS_CYAN=$'\e[1;96m'
+  ATLAS_BLUE=$'\e[1;94m'; ATLAS_GREEN=$'\e[1;92m'
+  ATLAS_YELLOW=$'\e[1;93m'; ATLAS_RESET=$'\e[0m'
+else
+  ATLAS_MAGENTA=''; ATLAS_CYAN=''; ATLAS_BLUE=''
+  ATLAS_GREEN=''; ATLAS_YELLOW=''; ATLAS_RESET=''
+fi
+
+atlas_line() { printf '%s%s%s\n' "$1" "$2" "$ATLAS_RESET"; }
+atlas_run() {
+  local atlas_exit=0
+  "$ATLAS_PYTHON" "$ATLAS_ROOT/atlas.py" "$@" || atlas_exit=$?
+  if (( atlas_exit != 0 )); then
+    atlas_line "$ATLAS_YELLOW" "Command finished with status $atlas_exit; check the details above."
+  fi
+}
+atlas_authorized() {
+  local atlas_answer
+  read -r -p 'Authorized for DNS/HTTP checks? Type YES: ' atlas_answer || return 1
+  [[ "$atlas_answer" == 'YES' ]]
+}
+atlas_menu() {
+  local atlas_choice atlas_domain atlas_directory atlas_file atlas_wordlist atlas_pause
+  local -a atlas_args
+  while true; do
+    printf '\n'
+    if command -v figlet >/dev/null 2>&1; then
+      while IFS= read -r atlas_banner_line; do
+        atlas_line "$ATLAS_MAGENTA" "$atlas_banner_line"
+      done < <(figlet -f slant ATLAS)
+    else
+      atlas_line "$ATLAS_MAGENTA" '    A T L A S  /  RECON TERMINAL'
+    fi
+    atlas_line "$ATLAS_BLUE" '============================================================'
+    atlas_line "$ATLAS_CYAN" '  [1] Passive discovery'
+    atlas_line "$ATLAS_GREEN" '  [2] Active DNS + wordlist'
+    atlas_line "$ATLAS_MAGENTA" '  [3] Active DNS + permutations + HTTP metadata'
+    atlas_line "$ATLAS_BLUE" '  [4] Dependency doctor'
+    atlas_line "$ATLAS_YELLOW" '  [5] Command help'
+    atlas_line "$ATLAS_CYAN" '  [6] Show full numbered results'
+    atlas_line "$ATLAS_GREEN" '  [7] Check every discovered subdomain'
+    atlas_line "$ATLAS_YELLOW" '  [8] Save all domains to a file'
+    atlas_line "$ATLAS_MAGENTA" '  [9] Discover + background availability checks'
+    atlas_line "$ATLAS_BLUE" '  [0] Exit'
+    atlas_line "$ATLAS_BLUE" '============================================================'
+    printf '%satlas > %s' "$ATLAS_GREEN" "$ATLAS_RESET"
+    read -r atlas_choice || return 0
+    case "$atlas_choice" in
+      0) return 0 ;;
+      4) atlas_run doctor ;;
+      5) atlas_run scan --help ;;
+      6)
+        read -r -p 'Saved run directory: ' atlas_directory || return 0
+        atlas_run browse "$atlas_directory"
+        ;;
+      7)
+        read -r -p 'Saved run directory: ' atlas_directory || return 0
+        if atlas_authorized; then atlas_run check "$atlas_directory" --authorized; fi
+        ;;
+      8)
+        read -r -p 'Saved run directory: ' atlas_directory || return 0
+        read -r -p 'Save all domains to file: ' atlas_file || return 0
+        atlas_run export "$atlas_directory" -o "$atlas_file"
+        ;;
+      1|2|3|9)
+        read -r -p 'Root domain: ' atlas_domain || return 0
+        atlas_args=(scan -d "$atlas_domain")
+        if [[ "$atlas_choice" != 1 ]]; then
+          if ! atlas_authorized; then
+            atlas_line "$ATLAS_YELLOW" 'Checks not selected. Returning to menu.'
+            continue
+          fi
+          atlas_args+=(--authorized)
+          if [[ "$atlas_choice" == 9 ]]; then
+            atlas_args+=(--check-live)
+          else
+            atlas_args+=(--mode active)
+            read -r -p 'Wordlist path [bundled starter]: ' atlas_wordlist || return 0
+            if [[ -n "$atlas_wordlist" ]]; then atlas_args+=(--wordlist "$atlas_wordlist"); fi
+            if [[ "$atlas_choice" == 3 ]]; then atlas_args+=(--permute --http); fi
+          fi
+        fi
+        atlas_run "${atlas_args[@]}"
+        ;;
+      *) atlas_line "$ATLAS_YELLOW" 'Choose an option from 0 to 9.'; continue ;;
+    esac
+    read -r -p 'Press Enter to return to the menu: ' atlas_pause || return 0
+  done
+}
+
+if (( $# == 0 )) || [[ "$1" == menu ]]; then
+  atlas_menu
+else
+  exec "$ATLAS_PYTHON" "$ATLAS_ROOT/atlas.py" "$@"
+fi

@@ -1,0 +1,11 @@
+.venv/
+.venv-windows/
+__pycache__/
+*.pyc
+results/
+*.log
+.env
+.env.*
+provider-config.yaml
+*.zip
+work/

@@ -1,0 +1,216 @@
+.TH ATLAS 1 "October 2026" "ATLAS 1.5.0" "User Commands"
+.SH NAME
+atlas \- scoped Linux subdomain discovery and DNS evidence mapping
+.SH SYNOPSIS
+.B atlas menu
+.br
+.B atlas doctor
+.br
+.B atlas scan -d DOMAIN
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+Combines certificate transparency, historical URL hosts and optional passive
+executables. Active mode generates bounded DNS guesses, validates records,
+marks possible wildcard answers, and optionally collects HTTP metadata.
+Results are evidence, not a completeness or vulnerability guarantee.
+.SH COMMANDS
+.TP
+.B menu
+Persistent numbered terminal dashboard with colors and optional figlet banner.
+.TP
+.B doctor
+Display optional tool locations and Python DNS dependency availability.
+.TP
+.B scan
+Enumerate within one root hostname; URLs and IP addresses are rejected.
+.SH SCAN OPTIONS
+.TP
+.B -d, --domain DOMAIN
+Required root domain, including IDNA-compatible international names.
+.TP
+.B --mode passive|active
+Passive is the default. Active enables DNS discovery and validation.
+.TP
+.B --authorized
+Required acknowledgment for active checks within your authorized scope.
+.TP
+.B --sources LIST
+Comma-separated crtsh,certspotter,hackertarget,wayback,subfinder,assetfinder,findomain. All default on.
+.TP
+.B --import FILE
+Import evidence; repeat for multiple files. Extract and scope-filter hostnames.
+.TP
+.B --offline
+Skip passive network providers. Active mode still performs DNS/HTTP checks.
+.TP
+.B --exclude DOMAIN
+Exclude a hostname and descendants. Repeatable.
+.TP
+.B -o, --output DIRECTORY
+Parent directory for a new timestamped run. Default results.
+.TP
+.B -w, --wordlist FILE
+DNS labels/prefixes, one per line; active only. Default bundled starter list.
+.TP
+.B --rate NUMBER
+Positive built-in DNS query rate per second; default 10. Passed to external
+tools where supported. Not a universal provider rate limit.
+.TP
+.B --timeout SECONDS
+Positive per-provider request/DNS lifetime, default 10.
+.TP
+.B --tool-timeout SECONDS
+External command timeout, default 600.
+.TP
+.B --archive-limit NUMBER
+Maximum Wayback CDX records, default 10000; capped coverage.
+.TP
+.B --max-candidates NUMBER
+Maximum generated guesses, default 10000. Does not cap passive evidence.
+.TP
+.B --recursive-depth 0|1|2|3
+Expand wordlist under known names at or below this relative depth.
+One expansion pass; default 0 means root wordlist only.
+.TP
+.B --wildcard-tests NUMBER
+Random sibling samples per parent, default 3. Heuristic classification.
+.TP
+.B --permute
+Use installed alterx for bounded permutations and enrichment; active only.
+.TP
+.B --engine builtin|puredns
+DNS backend. PureDNS needs massdns and both resolver files. Builtin default.
+.TP
+.B --resolvers FILE
+DNS resolver IPs, one per line. Builtin defaults to system DNS.
+.TP
+.B --trusted-resolvers FILE
+Trusted validation resolver list, required for puredns.
+.TP
+.B --http
+Use recognized ProjectDiscovery httpx to inventory resolved non-suspect hosts.
+No redirect following or extracted-domain probing enabled. Active only.
+.TP
+.B -h, --help
+Help for the current command. Use atlas scan --help for scan flags.
+.TP
+.B --version
+Print version (top-level option).
+.SH OUTPUT
+subdomains.txt: discovered names excluding apex.
+.br
+resolved.txt: names currently resolving without detected wildcard overlap.
+.br
+assets.jsonl and assets.csv: names, sources, states, DNS records.
+.br
+summary.json: source outcomes, counts, timestamps and settings.
+.br
+wildcards.json: random sibling sample evidence.
+.br
+report.txt: plain-text inventory report.
+.br
+raw/: provider responses and external stdout/stderr logs.
+.br
+candidates.txt: active guesses, not proof of discovery.
+.br
+http.jsonl: optional HTTP metadata.
+.SH STATES
+passive-unverified, resolved, wildcard-suspect, unresolved, indeterminate.
+Wildcard suspects are retained. DNS shared infrastructure/rotating answers can
+produce false positives or negatives. Query errors are preserved where recorded.
+.SH ENVIRONMENT
+.B NO_COLOR
+disables ANSI colors. PATH selects optional tools. Subfinder provider credentials
+are configured using its own configuration files.
+.SH EXAMPLES
+.nf
+atlas scan -d example.com
+atlas scan -d example.com --offline --import names.txt
+atlas scan -d example.com --mode active --authorized -w words.txt
+atlas scan -d example.com --mode active --authorized --permute --http
+.fi
+.SH EXIT STATUS
+0 successful (optional tools may be skipped); 1 provider/stage failure;
+2 configuration or input failure; 130 interrupted with partial report.
+.SH LIMITATIONS
+No exhaustive-discovery guarantee. Private DNS, API quotas, archives, unknown
+labels and exclusions constrain coverage. Negative generated answers are not
+stored individually. Recursive expansion is bounded and uses initial seeds.
+External CLI compatibility must be checked on Linux. No exploits or takeover
+claims are performed. See README.md and RESEARCH.md for details and sources.
+.SH SEE ALSO
+subfinder, assetfinder, findomain, alterx, puredns, massdns, httpx
+
+.SH TERMINAL REPORT
+.B atlas report DIRECTORY
+.br
+Display a saved run overview, stage outcomes and asset inventory in the terminal.
+No browser, GUI or HTML output is used.
+
+.SH COLOR AND PAGINATION
+.B atlas --color auto|always|never COMMAND
+.br
+Auto respects terminal detection and NO_COLOR. Always forces ANSI colors.
+.br
+.B atlas browse DIRECTORY
+.br
+Full numbered viewer with refresh, search and save.
+.br
+.B atlas report DIRECTORY --find TEXT --details
+.br
+Full numbered terminal viewer with optional search and evidence details.
+Use --status to filter by the original machine-readable asset status.
+.SH CERTIFICATE PAGINATION
+.B --ct-pages NUMBER
+limits Cert Spotter pages, default 5.
+.br
+.B --ct-after ID
+continues from a saved issuance cursor. Import earlier evidence to combine runs.
+
+.SH AVAILABILITY CHECKS
+.B atlas check DIRECTORY --authorized
+.br
+Queue every discovered subdomain for background DNS and HTTP checks.
+Options: --workers 1..32 (default 8), --rate NUMBER (default 10),
+--timeout SECONDS (default 5), --dns-only, -o OUTPUT_PARENT.
+Checks create a new run directory and preserve original discovery evidence.
+.br
+.B atlas scan -d DOMAIN --check-live --authorized
+.br
+Discover, then check every discovered name. --workers sets concurrency.
+The explicit operation-start rate does not count internal DNS retries or
+OS resolution performed by the HTTP stack.
+.SH AVAILABILITY LABELS
+UP means an HTTP response, including redirects and errors. NO RESPONSE means
+neither HTTPS nor HTTP responded, not proven downtime. NO DNS means no usable
+address returned. DNS ONLY means HTTP was not checked. CHECK ERROR is uncertainty.
+CHECKING means pending. See --details for timestamps and evidence.
+.SH SAVE AND FULL LIST
+.B atlas export DIRECTORY -o FILE
+.br
+Save every subdomain as one hostname per line. --format csv|jsonl adds status
+records. --availability UP selects only web-responsive names. --force permits
+replacing an existing export.
+.br
+.B atlas report DIRECTORY
+.br
+Display the full list. --availability filters check results.
+Interactive browse keys: r refresh, s search, w save, q exit. Full list shown immediately.
+Menu 7 checks a saved run, 8 saves domains, 9 discovers and checks.
+.SH CHECK FILES
+availability.csv, subdomains.txt, up.txt, report.txt, assets.jsonl, summary.json.
+Completed results are checkpointed; interrupted runs preserve pending rows.
+No completeness or permanent-availability guarantee is provided.
+
+.SH SERIAL NUMBERS
+Every displayed subdomain has a serial number, starting at 1. The total count
+appears below the full list. CSV exports include sr_no. Plain text domain
+exports remain one hostname per line. Use terminal scrollback for large lists.
+
+.SH DEFAULT STARTUP
+.B atlas
+.br
+With no arguments, open the colorful Bash menu automatically. No menu command
+or color flag is needed. Optional figlet produces a slant banner. A colored
+text fallback works without figlet. NO_COLOR or ATLAS_COLOR=never disables
+color. The Python entry point also opens a menu when started without arguments.
