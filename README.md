@@ -120,6 +120,12 @@ The scan prints its saved directory. Replace the placeholders below with that **
 
 ## Look up a discovered subdomain (v1.6)
 
+**Immediately after discovery**, the menu and interactive CLI offer `[l] WHOIS / IP / reverse-IP lookup`. Press **l**, enter the subdomain's **SR NO** from the list just displayed, and choose a lookup. The current run is selected automatically; no folder path re-entry is needed. After `--check-live`, lookup uses the newly checked results. Press Enter to finish instead. Use `--lookup` to force this workflow or `--no-lookup` for scripts; redirected/non-interactive scans do not prompt by default.
+
+```bash
+atlas scan -d example.com --lookup
+```
+
 Open `atlas`, choose **10**, enter a saved run directory, and select the **SR NO** next to the subdomain. Choose:
 
 | Lookup | Information shown |

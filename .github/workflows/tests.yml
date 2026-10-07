@@ -32,6 +32,7 @@ jobs:
           "$HOME/.local/bin/atlas" lookup --help
           printf 'api.example.com\n' > /tmp/atlas-ci-names.txt
           python atlas.py scan -d example.com --offline --import /tmp/atlas-ci-names.txt
+          printf '\n' | python atlas.py scan -d example.com --offline --import /tmp/atlas-ci-names.txt --lookup -o /tmp/atlas-ci-lookup
           atlas_run_directory=(results/example.com-*)
           printf '10\n%s\nq\n\n0\n' "${atlas_run_directory[0]}" | bash atlas
       - name: Windows launcher smoke check

@@ -17,7 +17,7 @@ import time
 import urllib.parse
 import urllib.request
 
-VERSION = '1.6.0'
+VERSION = '1.6.1'
 BASE = Path(__file__).resolve().parent
 TOOLS = ['subfinder', 'assetfinder', 'findomain', 'alterx', 'puredns', 'massdns', 'httpx']
 
@@ -224,6 +224,22 @@ def lookup_dashboard(directory, find='', show_list=True):
             continue
         main(['lookup', str(directory), '--serial', serial, '--kind', kind, '--find', find])
 
+
+def offer_scan_lookup(directory):
+    """Offer enrichment of the just-displayed results without changing scan status."""
+    try:
+        summary, rows = load_assets(directory)
+        if not ordered_subdomains(summary, rows):
+            return
+        say('\n    NEXT: Look up any discovered subdomain using its SR NO above.', '1;95')
+        choice = input('[l] WHOIS / IP / reverse-IP lookup  [Enter] Finish > ').strip().lower()
+        if choice == 'l':
+            lookup_dashboard(directory, show_list=False)
+    except (EOFError, KeyboardInterrupt):
+        say('Lookup selection closed; discovery results are saved.', 93)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        say('Cannot open lookup selection: ' + str(error), 93)
+
 def export_report(directory, filename, format='txt', availability='', force=False):
     summary, rows = load_assets(directory)
     rows = ordered_subdomains(summary, rows, availability=availability)
@@ -307,6 +323,8 @@ def check_report(args):
         f'\nTOTAL SUBDOMAINS: {len(by_name):,}\n', encoding='utf-8')
     say(f'Checks saved: {output}', '1;92')
     show_report(output)
+    if not interrupted and getattr(args, 'lookup', False):
+        offer_scan_lookup(output)
     return 130 if interrupted else 0
 
 def positive(value):
@@ -671,6 +689,11 @@ def parser():
     scan.add_argument('--http', action='store_true', help='optional HTTP metadata collection using ProjectDiscovery httpx')
     scan.add_argument('--check-live', action='store_true', help='background DNS/HTTP verification after discovery; requires --authorized')
     scan.add_argument('--workers', type=positive, choices=range(1, 33), default=8)
+    followup = scan.add_mutually_exclusive_group()
+    followup.add_argument('--lookup', dest='lookup', action='store_true', default=None,
+                          help='offer SR NO lookup after discovery; automatic in an interactive terminal')
+    followup.add_argument('--no-lookup', dest='lookup', action='store_false',
+                          help='finish after discovery without an interactive lookup prompt')
     return p
 
 def main(argv=None):
@@ -777,7 +800,7 @@ def main(argv=None):
                 elif choice == '10':
                     main(['lookup', input('Saved run directory: ').strip()])
                 elif choice in ('1', '2', '3', '9'):
-                    options = ['scan', '-d', input('Root domain: ').strip()]
+                    options = ['scan', '--lookup', '-d', input('Root domain: ').strip()]
                     if choice == '9':
                         if input('Authorized for DNS/HTTP checks? Type YES: ').strip() != 'YES':
                             continue
@@ -825,14 +848,18 @@ def main(argv=None):
         if args.mode == 'active':
             run.active()
         run.save()
+        lookup_after_scan = args.lookup if args.lookup is not None else (sys.stdin.isatty() and sys.stdout.isatty())
         if args.check_live:
             check_args = argparse.Namespace(directory=str(run.out), output=args.output, workers=args.workers,
-                                            rate=args.rate, timeout=args.timeout, dns_only=False)
+                                            rate=args.rate, timeout=args.timeout, dns_only=False,
+                                            lookup=lookup_after_scan)
             check_code = check_report(check_args)
             if check_code:
                 return check_code
         else:
             show_report(run.out)
+            if lookup_after_scan:
+                offer_scan_lookup(run.out)
         return 1 if any(x['state'] == 'failed' for x in run.status) else 0
     except KeyboardInterrupt:
         if run:

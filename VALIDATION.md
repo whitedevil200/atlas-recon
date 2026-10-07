@@ -1,5 +1,15 @@
 # Validation record
 
+## Version 1.6.1 — post-discovery selection
+
+41 tests pass locally. New checks verify automatic lookup offers in interactive
+terminals, explicit post-scan selection of the displayed SR NO, non-interactive
+and --no-lookup behavior, cancellation without marking discovery failed, and
+selection from the new checked run after --check-live. Both menus request the
+follow-up explicitly. The user no longer needs to re-enter a saved run directory
+after discovery. Linux CI also exercises the explicit post-discovery prompt
+using offline evidence; no new public scan is required for this UI change.
+
 ## Version 1.6 — 7 October 2026
 
 36 offline tests passed on Windows/Python 3.14.3 with dnspython 2.8.0,

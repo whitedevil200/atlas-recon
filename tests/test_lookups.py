@@ -20,6 +20,66 @@ def dns_fixture(*ips):
 
 
 class Tests(unittest.TestCase):
+    def test_after_scan_selects_serial_from_current_results(self):
+        with tempfile.TemporaryDirectory() as directory:
+            evidence = Path(directory) / 'names.txt'
+            evidence.write_text('z.example.com\napi.example.com\n')
+            with patch('builtins.input', side_effect=['l', '1', '1', 'q']), \
+                    patch('atlas.lookup_report', return_value=0) as lookup, \
+                    contextlib.redirect_stdout(io.StringIO()) as display:
+                code = atlas.main(['scan', '-d', 'example.com', '--offline', '--import', str(evidence),
+                                   '-o', directory, '--lookup'])
+            self.assertEqual(code, 0)
+            args = lookup.call_args.args[0]
+            summary, rows = atlas.load_assets(args.directory)
+            self.assertEqual(atlas.ordered_subdomains(summary, rows)[args.serial - 1]['hostname'], 'api.example.com')
+            self.assertEqual(args.kind, 'whois')
+            self.assertIn('NEXT: Look up any discovered subdomain', display.getvalue())
+
+    def test_interactive_scan_offers_lookup_automatically(self):
+        with tempfile.TemporaryDirectory() as directory:
+            evidence = Path(directory) / 'names.txt'
+            evidence.write_text('api.example.com\n')
+            with contextlib.redirect_stdout(io.StringIO()), \
+                    patch('atlas.sys.stdin.isatty', return_value=True), \
+                    patch('atlas.sys.stdout.isatty', return_value=True), \
+                    patch('atlas.offer_scan_lookup') as offer:
+                self.assertEqual(atlas.main(['scan', '-d', 'example.com', '--offline', '--import', str(evidence),
+                                             '-o', directory]), 0)
+            offer.assert_called_once()
+
+    def test_noninteractive_and_no_lookup_scans_do_not_prompt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            evidence = Path(directory) / 'names.txt'
+            evidence.write_text('api.example.com\n')
+            for flag in ([], ['--no-lookup']):
+                with patch('builtins.input', side_effect=AssertionError('unexpected prompt')), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(atlas.main(['scan', '-d', 'example.com', '--offline', '--import', str(evidence),
+                                                 '-o', directory] + flag), 0)
+
+    def test_after_scan_cancel_preserves_successful_discovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            evidence = Path(directory) / 'names.txt'
+            evidence.write_text('api.example.com\n')
+            with patch('builtins.input', side_effect=KeyboardInterrupt), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(atlas.main(['scan', '-d', 'example.com', '--offline', '--import', str(evidence),
+                                             '-o', directory, '--lookup']), 0)
+            run = next(Path(directory).glob('example.com-*'))
+            summary, _ = atlas.load_assets(run)
+            self.assertFalse(any(x['stage'] == 'run' and x['state'] == 'failed' for x in summary['stages']))
+
+    def test_after_checks_lookup_uses_new_checked_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            evidence = Path(directory) / 'names.txt'
+            evidence.write_text('api.example.com\n')
+            with patch('availability.check_all'), patch('atlas.offer_scan_lookup') as offer, \
+                    contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(atlas.main(['scan', '-d', 'example.com', '--offline', '--import', str(evidence),
+                                             '-o', directory, '--lookup', '--check-live', '--authorized']), 0)
+            summary, _ = atlas.load_assets(offer.call_args.args[0])
+            self.assertEqual(summary['check_state'], 'complete')
+
     def saved(self, directory):
         args = atlas.parser().parse_args(['scan', '-d', 'example.com', '--offline', '-o', directory])
         with contextlib.redirect_stdout(io.StringIO()):

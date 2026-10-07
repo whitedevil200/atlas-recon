@@ -1,4 +1,4 @@
-.TH ATLAS 1 "October 2026" "ATLAS 1.6.0" "User Commands"
+.TH ATLAS 1 "October 2026" "ATLAS 1.6.1" "User Commands"
 .SH NAME
 atlas \- scoped Linux subdomain discovery and DNS evidence mapping
 .SH SYNOPSIS
@@ -215,6 +215,12 @@ or color flag is needed. Optional figlet produces a slant banner. A colored
 text fallback works without figlet. NO_COLOR or ATLAS_COLOR=never disables
 color. The Python entry point also opens a menu when started without arguments.
 .SH SELECTED SUBDOMAIN LOOKUPS
+After discovery, interactive terminals and menu scans offer l to look up a
+serial number from the displayed results. No saved directory re-entry is needed.
+Press Enter to finish. --lookup forces this prompt; --no-lookup suppresses it
+for scripted scans. Non-interactive scans do not prompt by default.
+With --check-live, selection uses the newly checked run and its displayed order.
+.br
 .B atlas lookup DIRECTORY
 .br
 Display full numbered results and choose a serial number, then WHOIS/RDAP,

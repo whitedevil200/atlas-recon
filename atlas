@@ -83,7 +83,7 @@ atlas_menu() {
         ;;
       1|2|3|9)
         read -r -p 'Root domain: ' atlas_domain || return 0
-        atlas_args=(scan -d "$atlas_domain")
+        atlas_args=(scan --lookup -d "$atlas_domain")
         if [[ "$atlas_choice" != 1 ]]; then
           if ! atlas_authorized; then
             atlas_line "$ATLAS_YELLOW" 'Checks not selected. Returning to menu.'
