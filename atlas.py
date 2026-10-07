@@ -17,7 +17,7 @@ import time
 import urllib.parse
 import urllib.request
 
-VERSION = '1.5.0'
+VERSION = '1.6.0'
 BASE = Path(__file__).resolve().parent
 TOOLS = ['subfinder', 'assetfinder', 'findomain', 'alterx', 'puredns', 'massdns', 'httpx']
 
@@ -84,6 +84,13 @@ def panel(title, lines, color=36):
             say('| ' + part.ljust(width - 4) + ' |', '1;96')
     say('+' + '-' * (width - 2) + '+', color)
 
+def ordered_subdomains(summary, rows, find='', status='', availability=''):
+    selected = [r for r in rows if r['hostname'] != summary['root'] and
+                find.lower() in r['hostname'].lower() and (not status or r['status'] == status) and
+                (not availability or r.get('availability') == availability)]
+    return sorted(selected, key=lambda r: (bool(re.search(r'\d', r['hostname'])), len(r['hostname'].split('.')), r['hostname']))
+
+
 def show_report(directory, page=1, page_size=15, find='', status='', details=False, all_rows=False, availability=''):
     directory = Path(directory)
     summary = json.loads((directory / 'summary.json').read_text(encoding='utf-8'))
@@ -104,10 +111,7 @@ def show_report(directory, page=1, page_size=15, find='', status='', details=Fal
         say(f"    {stage['state'].upper():7} {stage['stage']}", 92 if stage['state'] == 'ok' else 93)
         if details:
             say('            ' + stage['detail'], 90)
-    selected = [r for r in rows if r['hostname'] != summary['root'] and
-                find.lower() in r['hostname'].lower() and (not status or r['status'] == status) and
-                (not availability or r.get('availability') == availability)]
-    selected.sort(key=lambda r: (bool(re.search(r'\d', r['hostname'])), len(r['hostname'].split('.')), r['hostname']))
+    selected = ordered_subdomains(summary, rows, find, status, availability)
     visible = selected
     serial_width = max(7, len(str(len(selected))) + 2)
     width = max(28, min(shutil.get_terminal_size((90, 24)).columns - 25 - serial_width, 75))
@@ -147,13 +151,15 @@ def browse_report(directory):
     find = ''
     while True:
         show_report(directory, find=find)
-        choice = input('\n[r] refresh  [s] search  [w] save  [q] menu > ').strip().lower()
+        choice = input('\n[r] refresh  [s] search  [l] lookup by SR NO  [w] save  [q] menu > ').strip().lower()
         if choice == 'q':
             return
         if choice == 's':
             find = input('Hostname contains [blank shows all]: ').strip()
         elif choice == 'w':
             export_report(directory, input('Save full domain list to: ').strip(), 'txt', '')
+        elif choice == 'l':
+            lookup_dashboard(directory, find=find, show_list=False)
 
 def load_assets(directory):
     directory = Path(directory)
@@ -161,10 +167,66 @@ def load_assets(directory):
     rows = [json.loads(x) for x in (directory / 'assets.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
     return summary, rows
 
+
+def lookup_report(args):
+    import lookups
+    summary, rows = load_assets(args.directory)
+    root = normalize(summary['root'])
+    exclusions = summary.get('settings', {}).get('exclude', [])
+    if not root or root != summary['root'] or any(normalize(x) != x for x in exclusions):
+        raise ValueError('invalid saved scope')
+    selected = ordered_subdomains(summary, rows, args.find)
+    if args.serial < 1 or args.serial > len(selected):
+        raise ValueError(f'SR NO must be between 1 and {len(selected)} in the displayed list')
+    hostname = selected[args.serial - 1]['hostname']
+    if normalize(hostname) != hostname or not scoped(hostname, root, exclusions):
+        raise ValueError('selected hostname is invalid or excluded from the saved scope')
+    # Preflight output and dependencies before making provider requests.
+    if args.output and Path(args.output).exists():
+        raise FileExistsError('lookup output already exists; choose a new file')
+    if args.output and not Path(args.output).parent.is_dir():
+        raise ValueError('lookup output parent directory does not exist')
+    import tldextract
+    if args.kind in ('ip', 'all'):
+        import ipwhois
+    if args.kind != 'whois':
+        import dns.resolver
+    say(f'    SELECTED SR NO {args.serial}: {hostname}', '1;95')
+    say('    Looking up selected host; provider limits and timeouts apply.', '1;94')
+    result = lookups.enrich(hostname, root, rows, args.kind, args.directory, args.timeout,
+                           args.max_ips, args.refresh, args.no_external, args.legacy_whois, exclusions)
+    result['serial'] = args.serial
+    result['selection_filter'] = args.find
+    lookups.show(result)
+    path = lookups.save(result, args.directory, args.output)
+    say(f'    Saved lookup evidence: {path}', '1;92')
+    return 1 if result['partial'] else 0
+
+
+def lookup_dashboard(directory, find='', show_list=True):
+    if show_list:
+        show_report(directory, find=find)
+    while True:
+        serial = input('\nSubdomain SR NO [q returns]: ').strip()
+        if serial.lower() == 'q':
+            return
+        if not serial.isdecimal() or int(serial) < 1:
+            say('Enter a positive SR NO from the displayed list.', '1;93')
+            continue
+        panel('LOOKUP OPTIONS', ['[1] WHOIS / domain RDAP', '[2] IP / ASN / DNS details',
+                               '[3] Reverse IP + PTR + saved shared-IP matches', '[4] All lookups', '[q] Return'], 35)
+        choice = input('lookup > ').strip().lower()
+        if choice == 'q':
+            return
+        kind = {'1': 'whois', '2': 'ip', '3': 'reverse-ip', '4': 'all'}.get(choice)
+        if not kind:
+            say('Choose lookup 1, 2, 3 or 4.', '1;93')
+            continue
+        main(['lookup', str(directory), '--serial', serial, '--kind', kind, '--find', find])
+
 def export_report(directory, filename, format='txt', availability='', force=False):
     summary, rows = load_assets(directory)
-    rows = [r for r in rows if r['hostname'] != summary['root'] and
-            (not availability or r.get('availability') == availability)]
+    rows = ordered_subdomains(summary, rows, availability=availability)
     target = Path(filename)
     # Exclusive creation avoids accidentally replacing an existing export.
     with target.open('w' if force else 'x', encoding='utf-8', newline='') as stream:
@@ -558,6 +620,17 @@ def parser():
     report.add_argument('--availability', choices=['UP', 'NO_RESPONSE', 'NO_DNS', 'DNS_ONLY', 'CHECK_ERROR', 'PENDING'], default='')
     browse = commands.add_parser('browse', help='full numbered results with refresh, search and save')
     browse.add_argument('directory')
+    lookup = commands.add_parser('lookup', help='WHOIS, IP and reverse-IP enrichment selected by report SR NO')
+    lookup.add_argument('directory')
+    lookup.add_argument('--serial', type=positive, help='SR NO from the report (or its --find filtered list); omit for interactive selection')
+    lookup.add_argument('--find', default='', help='same hostname filter used in the displayed report')
+    lookup.add_argument('--kind', choices=['whois', 'ip', 'reverse-ip', 'all'], default='all')
+    lookup.add_argument('--timeout', type=positive, choices=range(1, 31), default=8, metavar='SECONDS', help='per-request timeout in seconds (1..30)')
+    lookup.add_argument('--max-ips', type=positive, choices=range(1, 33), default=8, metavar='COUNT', help='bound IP enrichment (1..32); omitted addresses remain listed')
+    lookup.add_argument('--refresh', action='store_true', help='bypass successful provider response cache')
+    lookup.add_argument('--no-external', action='store_true', help='disable HackerTarget reverse-IP index; DNS/PTR and RDAP still run')
+    lookup.add_argument('--legacy-whois', action='store_true', help='use optional system whois instead of domain RDAP')
+    lookup.add_argument('-o', '--output', help='save JSON evidence to this new file instead of the run lookups folder')
     check = commands.add_parser('check', help='background DNS/HTTP checks for every discovered subdomain')
     check.add_argument('directory')
     check.add_argument('--authorized', action='store_true')
@@ -610,6 +683,23 @@ def main(argv=None):
         os.environ.setdefault('ATLAS_COLOR', 'always')
     if args.color:
         os.environ['ATLAS_COLOR'] = args.color
+    if args.command == 'lookup':
+        try:
+            if args.serial is None:
+                if args.output or args.refresh or args.no_external or args.legacy_whois or args.kind != 'all' or args.timeout != 8 or args.max_ips != 8:
+                    p.error('lookup flags require --serial; interactive selection uses default lookup settings')
+                lookup_dashboard(args.directory, args.find)
+                return 0
+            return lookup_report(args)
+        except ImportError:
+            say('Install/update requirements.txt to enable lookups (dnspython, ipwhois, tldextract).', '1;91')
+            return 2
+        except (EOFError, KeyboardInterrupt):
+            say('Lookup closed.', 93)
+            return 0
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            say('Cannot run lookup: ' + str(error), '1;91')
+            return 2
     if args.command in ('check', 'export'):
         if args.command == 'check' and not args.authorized:
             p.error('checks contact target hosts; --authorized is required')
@@ -649,6 +739,13 @@ def main(argv=None):
             say('dnspython    available')
         except ImportError:
             say('dnspython    missing: needed for active mode', 33)
+        for module in ('ipwhois', 'tldextract'):
+            try:
+                __import__(module)
+                say(f'{module:12} available')
+            except ImportError:
+                say(f'{module:12} missing: install/update requirements.txt', 33)
+        say(f'whois        {shutil.which("whois") or "not installed (optional legacy lookup)"}')
         return 0
     if args.command == 'menu':
         banner()
@@ -656,7 +753,8 @@ def main(argv=None):
             panel('OPERATIONS', ['[1] Passive discovery', '[2] Active DNS + wordlist',
                 '[3] Active DNS + permutations + HTTP', '[4] Dependency doctor',
                 '[5] Command help', '[6] View saved results', '[7] Check all discovered subdomains',
-                '[8] Save full domain list', '[9] Discover + check every result', '[0] Exit'], 35)
+                '[8] Save full domain list', '[9] Discover + check every result',
+                '[10] WHOIS / IP / reverse IP by SR NO', '[0] Exit'], 35)
             try:
                 choice = input('atlas > ').strip()
                 if choice == '0':
@@ -664,7 +762,7 @@ def main(argv=None):
                 if choice == '4':
                     main(['doctor'])
                 elif choice == '5':
-                    parser().parse_args(['scan', '--help'])
+                    parser().parse_args(['--help'])
                 elif choice == '6':
                     try:
                         browse_report(input('Run directory: ').strip())
@@ -676,6 +774,8 @@ def main(argv=None):
                         main(['check', directory, '--authorized'])
                 elif choice == '8':
                     main(['export', input('Saved run directory: ').strip(), '-o', input('Save domains to file: ').strip()])
+                elif choice == '10':
+                    main(['lookup', input('Saved run directory: ').strip()])
                 elif choice in ('1', '2', '3', '9'):
                     options = ['scan', '-d', input('Root domain: ').strip()]
                     if choice == '9':
@@ -693,7 +793,7 @@ def main(argv=None):
                         options += ['--permute', '--http']
                     main(options)
                 else:
-                    say('Choose an option from 0 to 9.', 33)
+                    say('Choose an option from 0 to 10.', 33)
             except SystemExit as error:
                 if error.code:
                     say('Command input was invalid; returning to dashboard.', 33)

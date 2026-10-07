@@ -1,5 +1,35 @@
 # Validation record
 
+## Version 1.6 — 7 October 2026
+
+36 offline tests passed on Windows/Python 3.14.3 with dnspython 2.8.0,
+ipwhois 1.3.0 and tldextract 5.4.0. Tests cover selected serials and filtered
+views, CSV/report numbering consistency, menu/browse routing, PSL parent
+extraction without hidden downloads, cached domain RDAP/bootstrap, refresh/expiry,
+scope/exclusions, output protection, reverse-index HTTP 200 quota/error bodies,
+IPv6/private IP handling, bounded IP work, DNS absence versus timeout, independent
+provider failure, ASN/bootstrap fallback, HTTPS routing fallback, HTTP 429 and
+oversized responses. The earlier 20 core/availability tests remain passing.
+
+Public lookup smoke test: imported only `www.example.com`, then selected SR NO 1
+for all lookups with max-ips=1 and timeout=5. Verisign domain RDAP, current DNS,
+Cloudflare IP registration and HackerTarget reverse-IP indexing returned results;
+273 index names were returned in this specific response (coverage/limits vary).
+No target HTTP probes, neighbour probes, range scans or out-of-scope additions
+occurred. IP work was deliberately capped and omitted IPs were reported with a
+partial exit status. The system's ASN DNS lookup failed, so registry bootstrap
+preserved IP registration. A second smoke test verified the HTTPS RIPEstat
+fallback returned origin AS13335 and BGP prefix 104.20.16.0/20.
+
+Python byte compilation and Windows launcher help/version passed. Local Linux
+Bash remains unavailable; expanded GitHub CI validates Bash syntax/menu routing,
+the installer and installed lookup help on Ubuntu, plus Windows launchers, on
+Python 3.10 and 3.13. Provider integrations are covered by mocks and the limited
+live smoke test, not an exhaustive production benchmark. Legacy whois binary
+and every ccTLD/RIR/provider combination have not been validated live.
+
+Earlier development records follow.
+
 Development host: Windows, Python 3.14.3, Earlier core validation used dnspython 2.8.0.
 
 Passed Python byte compilation, CLI scan help, dependency doctor, and eight offline unit tests (DNS mocked without a runtime dependency):

@@ -20,7 +20,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
-      - run: python -m py_compile atlas.py availability.py
+      - run: python -m py_compile atlas.py availability.py lookups.py
       - name: Bash syntax and menu smoke check
         if: runner.os == 'Linux'
         shell: bash
@@ -28,6 +28,12 @@ jobs:
           bash -n atlas install.sh
           printf '0\n' | bash atlas
           bash atlas --version
+          bash install.sh
+          "$HOME/.local/bin/atlas" lookup --help
+          printf 'api.example.com\n' > /tmp/atlas-ci-names.txt
+          python atlas.py scan -d example.com --offline --import /tmp/atlas-ci-names.txt
+          atlas_run_directory=(results/example.com-*)
+          printf '10\n%s\nq\n\n0\n' "${atlas_run_directory[0]}" | bash atlas
       - name: Windows launcher smoke check
         if: runner.os == 'Windows'
         shell: pwsh

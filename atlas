@@ -55,6 +55,7 @@ atlas_menu() {
     atlas_line "$ATLAS_GREEN" '  [7] Check every discovered subdomain'
     atlas_line "$ATLAS_YELLOW" '  [8] Save all domains to a file'
     atlas_line "$ATLAS_MAGENTA" '  [9] Discover + background availability checks'
+    atlas_line "$ATLAS_CYAN" '  [10] WHOIS / IP / reverse IP by SR NO'
     atlas_line "$ATLAS_BLUE" '  [0] Exit'
     atlas_line "$ATLAS_BLUE" '============================================================'
     printf '%satlas > %s' "$ATLAS_GREEN" "$ATLAS_RESET"
@@ -62,7 +63,11 @@ atlas_menu() {
     case "$atlas_choice" in
       0) return 0 ;;
       4) atlas_run doctor ;;
-      5) atlas_run scan --help ;;
+      5) atlas_run --help ;;
+      10)
+        read -r -p 'Saved run directory: ' atlas_directory || return 0
+        atlas_run lookup "$atlas_directory"
+        ;;
       6)
         read -r -p 'Saved run directory: ' atlas_directory || return 0
         atlas_run browse "$atlas_directory"
@@ -96,7 +101,7 @@ atlas_menu() {
         fi
         atlas_run "${atlas_args[@]}"
         ;;
-      *) atlas_line "$ATLAS_YELLOW" 'Choose an option from 0 to 9.'; continue ;;
+      *) atlas_line "$ATLAS_YELLOW" 'Choose an option from 0 to 10.'; continue ;;
     esac
     read -r -p 'Press Enter to return to the menu: ' atlas_pause || return 0
   done

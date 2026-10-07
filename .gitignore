@@ -9,3 +9,4 @@ results/
 provider-config.yaml
 *.zip
 work/
+lookups/

@@ -1,4 +1,4 @@
-.TH ATLAS 1 "October 2026" "ATLAS 1.5.0" "User Commands"
+.TH ATLAS 1 "October 2026" "ATLAS 1.6.0" "User Commands"
 .SH NAME
 atlas \- scoped Linux subdomain discovery and DNS evidence mapping
 .SH SYNOPSIS
@@ -195,7 +195,7 @@ replacing an existing export.
 .B atlas report DIRECTORY
 .br
 Display the full list. --availability filters check results.
-Interactive browse keys: r refresh, s search, w save, q exit. Full list shown immediately.
+Interactive browse keys: r refresh, s search, l lookup by serial, w save, q exit. Full list shown immediately.
 Menu 7 checks a saved run, 8 saves domains, 9 discovers and checks.
 .SH CHECK FILES
 availability.csv, subdomains.txt, up.txt, report.txt, assets.jsonl, summary.json.
@@ -214,3 +214,42 @@ With no arguments, open the colorful Bash menu automatically. No menu command
 or color flag is needed. Optional figlet produces a slant banner. A colored
 text fallback works without figlet. NO_COLOR or ATLAS_COLOR=never disables
 color. The Python entry point also opens a menu when started without arguments.
+.SH SELECTED SUBDOMAIN LOOKUPS
+.B atlas lookup DIRECTORY
+.br
+Display full numbered results and choose a serial number, then WHOIS/RDAP,
+IP/DNS/ASN, reverse IP, or all. Menu option 10 opens this workflow.
+.br
+.B atlas lookup DIRECTORY --serial NUMBER --kind whois|ip|reverse-ip|all
+.br
+Use the same saved directory and --find filter as the displayed report.
+Serials start at 1 in each view and exclude the apex. Default kind is all.
+WHOIS uses domain RDAP via IANA bootstrap and the registered parent from the
+bundled Public Suffix List (private platform suffixes excluded). Subdomains
+generally have no separate registration. Some ccTLDs lack RDAP.
+--legacy-whois instead invokes the optional installed whois command.
+.br
+IP lookup queries A, AAAA, CNAME, MX, NS, TXT, CAA and SOA with TTLs, plus
+PTR, regional registry RDAP, ASN DNS and HTTPS RIPEstat routing fallback.
+Registration country is not device geolocation.
+.br
+Reverse IP includes PTR, shared-IP matches from saved A/AAAA evidence and
+HackerTarget's partial IPv4 passive index. IPv6 external index is unsupported;
+PTR/local correlation remains available. Non-public IPs skip enrichment.
+--no-external disables only HackerTarget, not DNS/RDAP/routing services.
+Outside-scope and excluded neighbours are labeled and never probed or
+automatically added to discovery. Shared IP is not proof of common ownership.
+.SS Limits and evidence
+--timeout SECONDS: per-request timeout 1..30, default 8.
+.br
+--max-ips COUNT: IP enrichment limit 1..32, default 8. Omitted IPs are listed.
+.br
+--refresh: bypass successful response cache (one hour; IANA bootstrap 24 hours).
+DNS queries are always fresh. No automatic provider retries or recursive
+contact lookups. Provider quotas and errors remain visible.
+.br
+-o FILE: save JSON to a new file; existing files are never overwritten.
+Default evidence path is DIRECTORY/lookups/, with cached provider data under
+lookups/cache/. Raw and structured results include retrieval timestamps.
+Partial lookup evidence is preserved; exit code 1 indicates incomplete results,
+2 input/configuration errors. Reinstall requirements after upgrading.

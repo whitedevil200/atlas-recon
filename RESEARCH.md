@@ -1,5 +1,7 @@
 # Research notes
 
+Version 1.6: [WHOIS, IP and reverse-IP research and integration choices](docs/LOOKUP-RESEARCH.md).
+
 Reviewed official project documentation on 2026-10-05/06. Browser research inspected
 Subfinder and PureDNS repositories; additional primary repositories were read via
 web research. Upstream development branches are not stable compatibility contracts.
