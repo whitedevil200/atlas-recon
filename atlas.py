@@ -989,7 +989,7 @@ def parser():
     scan.add_argument('--mode', choices=['passive', 'active'], default='passive')
     scan.add_argument('--authorized', action='store_true', help='acknowledge authorization for active DNS/HTTP checks')
     scan.add_argument('--free-engines', action='store_true', help='run managed DNSx, plus HTTPx/TLSx with --http, and retain engine evidence (active mode)')
-    scan.add_argument('--sources', default='crtsh,certspotter,hackertarget,wayback,commoncrawl,subfinder,findomain')
+    scan.add_argument('--sources', default='crtsh,certspotter,hackertarget,wayback,subfinder,findomain')
     scan.add_argument('--ct-pages', type=positive, default=5, help='maximum Cert Spotter pages; provider quotas still apply')
     scan.add_argument('--ct-after', default='', help='Cert Spotter issuance cursor for continuing an earlier scan')
     scan.add_argument('--import', dest='imports', action='append', default=[], metavar='FILE', help='import text/JSON/URL evidence')
@@ -1197,7 +1197,7 @@ def main(argv=None):
         except ImportError:
             p.error('install requirements.txt for active mode')
     if args.profile == 'quick':
-        args.sources = 'certspotter,subfinder' if args.sources == 'crtsh,certspotter,hackertarget,wayback,commoncrawl,subfinder,findomain' else args.sources
+        args.sources = 'certspotter,subfinder' if args.sources == 'crtsh,certspotter,hackertarget,wayback,subfinder,findomain' else args.sources
         args.ct_pages = min(args.ct_pages, 2)
         args.max_candidates = min(args.max_candidates, 1000)
     elif args.profile == 'deep':
