@@ -11,3 +11,7 @@ printf '#!/usr/bin/env bash\nexec %q "$@"\n' "$ATLAS_ROOT/atlas" > "$HOME/.local
 chmod +x "$HOME/.local/bin/atlas"
 cp "$ATLAS_ROOT/man/atlas.1" "$HOME/.local/share/man/man1/atlas.1"
 printf 'Installed. Add ~/.local/bin to PATH, then type atlas to open the colorful menu.\n'
+
+if [[ "${ATLAS_SKIP_ENGINES:-0}" != 1 ]]; then
+  "$ATLAS_ROOT/.venv/bin/python" "$ATLAS_ROOT/atlas.py" setup-engines
+fi

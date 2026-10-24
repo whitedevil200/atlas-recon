@@ -67,12 +67,14 @@ atlas_menu() {
     atlas_line "$ATLAS_GREEN" '  [19] Watch / change snapshots'
     atlas_line "$ATLAS_YELLOW" '  [20] Resolver diagnostics'
     atlas_line "$ATLAS_MAGENTA" '  [21] Scoped HTTP/JS/CSP discovery'
+    atlas_line "$ATLAS_GREEN" '  [22] Install / repair free engine bundle'
     atlas_line "$ATLAS_BLUE" '  [0] Exit'
     atlas_line "$ATLAS_BLUE" '============================================================'
     printf '%satlas > %s' "$ATLAS_GREEN" "$ATLAS_RESET"
     read -r atlas_choice || return 0
     case "$atlas_choice" in
       0) return 0 ;;
+      22) atlas_run setup-engines ;;
       4) atlas_run doctor ;;
       5) atlas_run --help ;;
       11|12|13|14|15|16|17|18|19|20|21) atlas_run menu-action "$atlas_choice" ;;
@@ -108,12 +110,12 @@ atlas_menu() {
             atlas_args+=(--mode active)
             read -r -p 'Wordlist path [bundled starter]: ' atlas_wordlist || return 0
             if [[ -n "$atlas_wordlist" ]]; then atlas_args+=(--wordlist "$atlas_wordlist"); fi
-            if [[ "$atlas_choice" == 3 ]]; then atlas_args+=(--permute --http); fi
+            if [[ "$atlas_choice" == 3 ]]; then atlas_args+=(--permute --http --free-engines); fi
           fi
         fi
         atlas_run "${atlas_args[@]}"
         ;;
-      *) atlas_line "$ATLAS_YELLOW" 'Choose an option from 0 to 21.'; continue ;;
+      *) atlas_line "$ATLAS_YELLOW" 'Choose an option from 0 to 22.'; continue ;;
     esac
     read -r -p 'Press Enter to return to the menu: ' atlas_pause || return 0
   done

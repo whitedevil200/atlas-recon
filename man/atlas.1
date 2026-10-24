@@ -1,4 +1,4 @@
-.TH ATLAS 1 "October 2026" "ATLAS 2.0.0" "User Commands"
+.TH ATLAS 1 "October 2026" "ATLAS 2.1.0" "User Commands"
 .SH NAME
 atlas \- scoped Linux subdomain discovery and DNS evidence mapping
 .SH SYNOPSIS
@@ -308,8 +308,7 @@ Foreign names returned by certificates/redirects remain evidence only.
 .B atlas source commoncrawl|securitytrails|censys -d DOMAIN [-o DIRECTORY]
 .br
 Read a bounded passive provider page. --limit and --timeout bound work.
-Censys needs CENSYS_PAT and explicit CENSYS_SEARCH_ENABLED=1 account-credit
-consent; SecurityTrails needs SECURITYTRAILS_API_KEY. Missing keys and partial
+Censys and SecurityTrails are disabled in the free-only edition. Missing keys and partial
 coverage are explicit; these APIs may require subscriptions.
 .br
 .B atlas owner-import aws|route53|cloudflare|gcp FILE -d DOMAIN --authorized
@@ -360,3 +359,18 @@ External engines are optional and separately licensed. See docs/ENGINES.md,
 docs/UPGRADE-2.md, docs/BENCHMARK.md and THIRD_PARTY.md.
 Mocked adapter tests are not exhaustive live compatibility or performance
 benchmarks. No tool guarantees discovery of every public or private name.
+
+.SH FREE ENGINE BUNDLE (2.1)
+.B atlas setup-engines
+installs Subfinder, Findomain, DNSx, AlterX, HTTPx, TLSx and Katana from pinned,
+SHA-256 verified releases. Normal Linux/Windows installers run this by default.
+Menu option 22 installs or repairs the bundle. No paid API or key is required.
+Supported: Linux x86_64/arm64, Windows x86_64. Internet is needed during setup.
+Set ATLAS_ENGINE_HOME to change the managed directory; ATLAS_SKIP_ENGINES=1
+skips engine installation. Other adapters remain optional/manual.
+.TP
+.B scan --free-engines
+Active mode only. Add DNSx evidence; with --http also add HTTPx/TLSx.
+Offline scans skip these stages. Menu 3 enables this pipeline and AlterX.
+External-engine packets are outside the built-in DNS query counter.
+Censys, SecurityTrails and Chaos are disabled, even when credentials are present.

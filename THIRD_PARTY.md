@@ -1,8 +1,9 @@
 # Third-party software and services
 
 ATLAS source is licensed under MIT. This document identifies dependencies and
-optional interoperability targets; it does not relicense them. ATLAS does not
-bundle the optional reconnaissance engines below. Installing or invoking an
+optional interoperability targets; it does not relicense them. ATLAS installers fetch seven free upstream release executables into a managed
+directory; other adapters remain optional. The source wheel/ZIP contains the
+installer and lock manifest, not third-party binaries. Installing or invoking an
 engine separately does not imply that all possible integrations avoid license
 obligations. Review the license and notices of the exact version distributed.
 
@@ -51,7 +52,7 @@ confirmation is implied by DNS, TLS, fingerprint, or dangling-reference evidence
 
 ## Service terms, quotas, and data
 
-Certificate Transparency, RDAP, WHOIS, archival, reverse-IP, DNS and paid passive
+Certificate Transparency, RDAP, WHOIS, archival, reverse-IP, DNS and free public
 data providers have different terms, rate limits, geographic coverage, retention,
 and credit models. Open-source client licensing does not grant unlimited use of
 a service or redistribution rights to returned data. Reverse-IP co-location and
@@ -64,4 +65,5 @@ transitive dependencies and security policy; pin an audited release; verify
 publisher-supplied checksums/signatures using an independently obtained expected
 value; and run the adapter contract fixtures. Record binary SHA-256, version,
 configuration and schema in the run manifest. See `scripts/install-engines.sh`
-for an instruction-only release guide: it never downloads or executes installers.
+for the pinned, hash-verified free bundle installer. Installed metadata preserves
+archive notices, version, hashes and upstream repository URLs.

@@ -20,6 +20,11 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m pip install --require-hashes -r requirements-runtime.lock
       - run: python -m unittest discover -s tests -v
+      - name: Install and verify free engines (no target scans)
+        if: matrix.python == '3.13'
+        run: |
+          python atlas.py setup-engines
+          python scripts/check-engines.py
       - name: Controlled loopback DNS lab
         run: python scripts/benchmark-lab.py --output lab-benchmark.json
       - run: python -m py_compile atlas.py availability.py lookups.py dns_evidence.py inventory.py integrations.py workflows.py run_state.py
@@ -32,7 +37,7 @@ jobs:
           bash -n atlas install.sh
           printf '0\n' | bash atlas
           bash atlas --version
-          bash install.sh
+          ATLAS_SKIP_ENGINES=1 bash install.sh
           "$HOME/.local/bin/atlas" lookup --help
           printf 'api.example.com\n' > /tmp/atlas-ci-names.txt
           python atlas.py scan -d example.com --offline --import /tmp/atlas-ci-names.txt

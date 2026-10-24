@@ -1,6 +1,6 @@
 # Optional engines, passive sources and owner inventory
 
-ATLAS keeps its Bash/Python CLI and adds optional adapters around specialist tools. It never installs these engines or their module dependencies automatically. Start with:
+ATLAS keeps its Bash/Python CLI and adds optional adapters around specialist tools. The normal installer installs seven pinned free engines. Additional adapters remain manual; no paid API is required. Start with:
 
 ```bash
 atlas engines
@@ -32,9 +32,9 @@ Important distinction: **Subfinder, Assetfinder, Findomain and Chaos query the r
 
 | Engine and upstream | Mode and actual adapter behavior | Additional requirements / limits |
 | --- | --- | --- |
-| [Subfinder](https://github.com/projectdiscovery/subfinder) · MIT | Root-domain passive discovery; `-silent -oJ -cs -rl RATE -duc`; actual provider names retained. | Provider keys/configuration are managed by Subfinder. This adapter does not enable `-all` or guarantee all providers are usable. |
+| [Subfinder](https://github.com/projectdiscovery/subfinder) · MIT | Root-domain passive discovery; explicit keyless `-s` allowlist plus `-silent -oJ -cs -rl RATE -duc`; actual provider names retained. | Provider keys/configuration are managed by Subfinder. ATLAS uses only `crtsh,waybackarchive,rapiddns,digitorus,shodanct`; no `-all` or paid/keyed providers. |
 | [Assetfinder](https://github.com/tomnomnom/assetfinder) · MIT | Root-domain passive discovery; `--subs-only ROOT`. | No adapter-level requests/second flag; upstream API behavior applies. |
-| [Findomain](https://github.com/Findomain/Findomain) · GPL-3.0 | Root-domain passive discovery; `-t ROOT -q`. | Upstream API keys and quotas apply. Stable and beta capabilities differ; registry presence does not enable beta-only features. |
+| [Findomain](https://github.com/Findomain/Findomain) · GPL-3.0 | Root-domain passive discovery; `-t ROOT -q`. | Account/paid sources are explicitly excluded. Free endpoint quotas still apply; registry presence does not enable beta-only features. |
 | [DNSx](https://github.com/projectdiscovery/dnsx) · MIT | Resolve selected input; `-l INPUT -silent -json -rl RATE -duc`. | DNS observation, not HTTP availability. This adapter uses upstream resolver defaults; supplied resolver paths belong to the adapters listed below. |
 | [PureDNS](https://github.com/d3mondev/puredns) · GPL-3.0 | Resolve selected input, validate answers and filter wildcards; `resolve INPUT -q -r RESOLVERS --resolvers-trusted TRUSTED --rate-limit RATE --rate-limit-trusted RATE`. | Requires installed MassDNS plus both resolver files. Wildcard detection/validation can issue additional DNS queries. |
 | [MassDNS](https://github.com/blechschmidt/massdns) · GPL-3.0 | Resolve selected input to A records; JSON output, one concurrent lookup and one attempt: `-r RESOLVERS -t A -o J -s 1 -c 1 -q INPUT`. | Requires resolver file. Concurrency one is not an exact requests/second guarantee. It does not perform PureDNS-style wildcard validation. |
@@ -45,7 +45,7 @@ Important distinction: **Subfinder, Assetfinder, Findomain and Chaos query the r
 | [TLSx](https://github.com/projectdiscovery/tlsx) · MIT | Selected-host TLS enrichment on default port 443; JSON, SAN/CN/organization, TLS version/cipher and SHA-256 fingerprint. One worker, request delay and retries disabled. | Certificate validity dates already appear in JSON. `-not-before` and `-not-after` are not invented CLI flags. SANs are evidence only and are not automatically probed. |
 | [BBOT](https://github.com/blacklanternsecurity/bbot) · AGPL-3.0 | Curated **BBOT 3.x** executable profile: selected-host targets, `--strict-scope -p subdomain-enum -rf passive --no-deps --json --yes --no-color --event-types DNS_NAME`; `dnsresolve=false`. Also accepts existing JSONL import. | Actual version must identify 3.x before execution. Dependencies are not installed. This is not BBOT's full active reconnaissance preset. Passive modules may still require configured API keys. |
 | [OWASP Amass](https://github.com/owasp-amass/amass) · Apache-2.0; subcomponents vary | **Existing JSONL import mode**, not live Amass execution. Normalizes exported `name`, `host` or compatible hostname records. | Requires `--import-file FILE`. No guessed Amass v5 command or claim that every raw Asset Database schema is accepted. |
-| [Chaos Client](https://github.com/projectdiscovery/chaos-client) · MIT | Root-domain passive lookup; `chaos -d ROOT -silent`. `chaos-client` is also accepted as the adapter name. | Executable is `chaos`; requires `PDCP_API_KEY` and account entitlement. Dataset absence is not proof that a domain has no other subdomains. |
+| [Chaos Client](https://github.com/projectdiscovery/chaos-client) · MIT | Root-domain passive lookup; `chaos -d ROOT -silent`. `chaos-client` is also accepted as the adapter name. | Disabled in the free-only edition, including when credentials exist. |
 | [Notify](https://github.com/projectdiscovery/notify) · MIT | Explicit opt-in delivery adapter for scoped change notifications. Bounded bulk/file input; provider configuration passed by path, never printed. | Use the `watch --notify --notify-config FILE` workflow below. The generic engine CLI intentionally does not offer arbitrary notification arguments. |
 | [Katana](https://github.com/projectdiscovery/katana) · MIT | Selected-host crawling; JSONL, depth one, FQDN scope, one worker/input and explicit rate. | No headless mode, automatic form fill, model download or out-of-scope display is enabled. Crawling is an explicit action; it is not part of a passive source lookup. |
 | [BadDNS](https://github.com/blacklanternsecurity/baddns) · AGPL-3.0 | Exactly one selected hostname; `-s -m CNAME HOST`. | No automatic resource claiming or takeover exploitation. Output is an investigation lead, not proof of exploitability. The actual LICENSE is AGPL-3.0; a README badge may differ. |
@@ -80,7 +80,7 @@ atlas engine bbot RUN --authorized --import-file bbot-export.jsonl
 atlas engine subfinder RUN --authorized --rate 10
 atlas engine assetfinder RUN --authorized
 atlas engine findomain RUN --authorized
-atlas engine chaos RUN --authorized
+ # Chaos is disabled in the free-only edition
 ```
 
 The accepted configuration file paths are explicit; arbitrary passthrough shell or engine flags are rejected. Resolver, trusted resolver, permutation and provider configuration files must exist and be at most 8 MiB. No resolver list is silently downloaded.
@@ -113,33 +113,44 @@ The record artifact is a validated schema projection, **not** an unfiltered dump
 
 Useful states include `complete`, `imported`, `not_installed`, `configuration_required`, `auth_required`, `consent_required`, `unsupported_version`, `empty_input`, `failed`, `timeout`, `output_limit` and `schema_error`. `partial` means useful records were collected with an explicit coverage limit. Inspect the state and limitations rather than interpreting an empty list as a complete negative result. Bounded passive source collection currently returns a nonzero CLI status for `partial`, while retaining the collected inventory.
 
-## Complementary native passive sources
+## Free installation and sources
 
 ```bash
+atlas setup-engines
+atlas setup-engines --list
+atlas setup-engines --only subfinder,dnsx
+atlas scan -d example.com --mode active --authorized --permute --http --free-engines
 atlas source commoncrawl -d example.com --limit 100 --timeout 10 -o results
-atlas source securitytrails -d example.com --limit 100 --timeout 10 -o results
-atlas source censys -d example.com --limit 100 --timeout 10 -o results
 ```
 
-These source actions query public-data providers, not the target website. They use an explicit root, scope-filter results, bound response size to 8 MiB and do not automatically re-probe discovered names. Their timeout applies to each provider HTTP operation. Native adapters currently retain one bounded page rather than silently promising complete pagination.
+The default installer downloads seven pinned free release executables: Subfinder,
+Findomain, DNSx, AlterX, HTTPx, TLSx and Katana. SHA-256/size checks precede
+extraction. Engine and license/source provenance are retained in adjacent
+`.atlas.json` metadata. Linux x86_64/arm64 and Windows x86_64 are supported.
+ATLAS prepends its own managed engine directory to the process PATH only.
+No compiler, paid subscription or API key is needed for this bundle.
 
-| Source | Authentication and behavior | Coverage limitations |
-| --- | --- | --- |
-| [Common Crawl](https://index.commoncrawl.org/) | No API key. Fetches the official index catalog, then queries the latest listed crawl CDX index. Returned URLs become scoped host observations; archive timestamp is preserved. | One bounded latest-crawl response, not every historical crawl. Large/bulk operations should use the provider's documented bulk interfaces. |
-| [SecurityTrails](https://docs.securitytrails.com/reference/list-subdomains) | Set `SECURITYTRAILS_API_KEY`. Uses the documented domain/subdomains endpoint. | Account quotas and endpoint coverage apply; one response is treated as partial. Throttling and monthly quota exhaustion can both produce 429 errors. |
-| [Censys Platform](https://docs.censys.com/reference/v3-globaldata-search-query) | Set `CENSYS_PAT` and `CENSYS_SEARCH_ENABLED=1` to explicitly acknowledge search credit consumption; optionally set `CENSYS_ORGANIZATION_ID`. Uses `POST /v3/global/search/query` with `cert.names: "ROOT"`, requested `cert.names` field and page size at most 100. | Search requires an eligible account and role; a PAT alone does not grant search entitlement. This is Platform v3, not legacy v2 API-ID/secret authentication. One certificate-result page; a certificate hit may contain multiple SANs. Unknown response schema is reported, not silently treated as zero results. |
+Subfinder queries only sources declaring `keyRequirement=none` in v2.17.0:
+`crtsh,waybackarchive,rapiddns,digitorus,shodanct`. Findomain excludes certspotter,
+facebook, spyse, virustotalapikey, urlscan, securitytrails, c99 and both bufferover
+variants. Native Cert Spotter requests remain anonymous public API requests.
+Censys, SecurityTrails and Chaos are disabled even when credentials are present.
+No account-credit consent option can re-enable them.
 
-Credentials are read from environment variables or the upstream tool's own configuration. They are not embedded in generated commands, reports or examples. Follow provider-specific quotas and terms; exact pricing and entitlement come from your account rather than hard-coded assumptions.
+`--free-engines` enables DNSx evidence after built-in active validation, adding
+HTTPx/TLSx with `--http`; AlterX already runs with `--permute`. Menu 3 selects
+these options. Each stage retains `engines/NAME/result.json` and normalized
+observations in asset evidence; successful stages are checkpointed. Offline
+scans skip this pipeline. Katana crawling is an explicit selected-host action.
+External tools have individual rate/time/output caps; their internal DNS packets
+are not included in the built-in DNS query counter.
 
-For Censys on Bash:
-
-```bash
-# Set CENSYS_PAT securely in your environment first; do not paste it into shared logs.
-export CENSYS_SEARCH_ENABLED=1
-atlas source censys -d example.com --limit 100
-```
-
-For PowerShell, the corresponding explicit credit acknowledgement is `$env:CENSYS_SEARCH_ENABLED = '1'`.
+Only Common Crawl remains available through `atlas source`. It fetches the
+latest official crawl index and one bounded response, not all historical indexes.
+Free endpoints can throttle/fail; `partial` is retained as incomplete coverage.
+Other adapters in the matrix are optional/manual, not part of this seven-engine
+bundle. `atlas setup-engines` reports failures and exits nonzero; re-run it to
+retry. `ATLAS_SKIP_ENGINES=1` enables core-only installation for CI/offline labs.
 
 ## Authorized owner DNS exports
 
@@ -194,8 +205,6 @@ This is explicit authorization to send change notifications through the configur
 - [HTTPx flags and output](https://github.com/projectdiscovery/httpx#usage)
 - [TLSx JSON schema and certificate validity dates](https://github.com/projectdiscovery/tlsx#json-output)
 - [BBOT 3.x CLI and scope behavior](https://github.com/blacklanternsecurity/bbot/blob/stable/bbot/scanner/preset/args.py)
-- [Censys Platform API access and credits](https://docs.censys.com/reference/get-started)
-- [SecurityTrails quotas and rate limits](https://docs.securitytrails.com/docs/quotas-rate-limits)
 - [Integration contract tests](../tests/test_integrations.py)
 
 Use `atlas health RUN` to see the run's coverage and `atlas evidence RUN --serial 1` to inspect why an asset was discovered. Public certificate/archive evidence, generated candidates, current DNS responses and HTTP availability answer different questions and remain distinct.

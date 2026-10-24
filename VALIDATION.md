@@ -1,5 +1,17 @@
 # Validation record
 
+## Version 2.1 — 25 October 2026
+
+132 tests passed on the Windows development host. The seven pinned Windows
+engines were downloaded, SHA-256 verified, installed and answered version
+commands successfully. Subfinder source metadata confirms the configured
+allowlist is keyless. The clean installed-wheel test passed. Tests cover
+installer hash rejection, bounded extraction, license retention, idempotence,
+tamper repair, failed-download preservation and paid-provider no-request policy.
+This does not claim all optional adapters are installed or every provider works
+live. No public target was scanned for these checks.
+
+
 ## Version 2.0 â€” 24 October 2026
 
 125 offline unit/integration tests pass on the Windows development host with

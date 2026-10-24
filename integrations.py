@@ -5,6 +5,8 @@ engines deliberately require import of their output rather than guessed flags.
 """
 from __future__ import annotations
 
+import engine_bundle
+engine_bundle.activate()
 import ipaddress
 import json
 import os
@@ -45,7 +47,7 @@ ENGINES = {name: {'name': name, 'executable': name,
                   'license': license_, 'capability': capability,
                   'execution_supported': name in _SUPPORTED,
                   'mode': 'import' if name == 'amass' else 'executable',
-                  'installation': 'manual; select a reviewed release from https://github.com/' + repo + '/releases'}
+                  'installation': ('atlas setup-engines' if name in {'subfinder', 'dnsx', 'alterx', 'httpx', 'tlsx', 'katana', 'findomain'} else 'manual; select a reviewed release from https://github.com/' + repo + '/releases')}
            for name, (repo, license_, capability) in _REPOS.items()}
 for _engine_name, _metadata in ENGINES.items():
     _metadata['required_configuration'] = {
@@ -59,6 +61,8 @@ for _engine_name, _metadata in ENGINES.items():
     _metadata['input_mode'] = ('root-domain discovery' if _engine_name in {'subfinder', 'assetfinder', 'findomain', 'chaos'}
                                else 'existing JSONL export' if _engine_name == 'amass'
                                else 'selected scoped hostnames')
+    _metadata['bundled'] = _engine_name in {'subfinder', 'dnsx', 'alterx', 'httpx', 'tlsx', 'katana', 'findomain'}
+    _metadata['enabled'] = _engine_name != 'chaos'
     _metadata['validation'] = 'Mocked command/schema fixtures; installed binaries not claimed live-tested'
 MAX_BYTES = 8 * 1024 * 1024
 MAX_HOSTS = 10000
@@ -105,9 +109,9 @@ def _input_file(options, name):
 def build_command(name, executable, input_path, root, rate, limit, options):
     """Curated arguments only; no arbitrary extra command arguments accepted."""
     commands = {
-        'subfinder': ['-d', root, '-silent', '-oJ', '-cs', '-rl', str(rate), '-duc'],
+        'subfinder': ['-d', root, '-s', 'crtsh,waybackarchive,rapiddns,digitorus,shodanct', '-silent', '-oJ', '-cs', '-rl', str(rate), '-duc'],
         'assetfinder': ['--subs-only', root],
-        'findomain': ['-t', root, '-q'],
+        'findomain': ['-t', root, '-q', '--exclude-sources', 'certspotter,facebook,spyse,virustotalapikey,urlscan,securitytrails,c99,bufferover_free,bufferover_paid'],
         'dnsx': ['-l', str(input_path), '-silent', '-json', '-rl', str(rate), '-duc'],
         'alterx': ['-l', str(input_path), '-silent', '-limit', str(limit), '-duc'],
         'gotator': ['-sub', str(input_path), '-depth', '1', '-mindup', '-silent', '-t', '1'],
@@ -308,6 +312,8 @@ def run_engine(name, hosts, root, output_directory, timeout=60, rate=10, extra_o
     rate = int(rate)
     if name == 'chaos-client':
         name = 'chaos'
+    if name == 'chaos':
+        return _result(name, root, 'disabled', reason='Account-dependent services are disabled in the free-only edition')
     if name not in ENGINES:
         raise ValueError('Unknown engine')
     if name == 'notify':
@@ -420,52 +426,9 @@ def collect_source(name, root, timeout=30, limit=1000):
     """Read bounded official APIs. Single page only: explicitly report partial coverage."""
     root = _root(root)
     _limits(timeout, limit)
-    headers = {}
-    if name == 'securitytrails':
-        key = os.environ.get('SECURITYTRAILS_API_KEY')
-        if not key:
-            return _result(name, root, 'auth_required')
-        headers['APIKEY'] = key
-        url = 'https://api.securitytrails.com/v1/domain/' + root + '/subdomains'
-    elif name == 'censys':
-        key = os.environ.get('CENSYS_PAT')
-        if not key:
-            return _result(name, root, 'auth_required', reason='CENSYS_PAT requires Platform search entitlement; free accounts do not include search API')
-        if os.environ.get('CENSYS_SEARCH_ENABLED', '').lower() not in {'1', 'true', 'yes'}:
-            return _result(name, root, 'consent_required', reason='Set CENSYS_SEARCH_ENABLED=1 to acknowledge paid search API credit consumption')
-        url = 'https://api.platform.censys.io/v3/global/search/query'
-        organization = os.environ.get('CENSYS_ORGANIZATION_ID')
-        if organization:
-            url += '?' + urllib.parse.urlencode({'organization_id': organization})
-        headers = {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'Accept': 'application/json'}
-        try:
-            data = _fetch_json(url, headers, timeout,
-                               {'query': 'cert.names: "' + root + '"',
-                                'page_size': min(limit, 100), 'fields': ['cert.names']})
-            hits = data.get('result', {}).get('hits')
-            if not isinstance(hits, list):
-                return _result(name, root, 'schema_error', reason='Expected Platform v3 result.hits array')
-            candidates = []
-            for hit in hits:
-                if not isinstance(hit, dict):
-                    continue
-                # Platform asset schema wraps the certificate in certificate_v1.resource.
-                certificate = hit.get('certificate_v1', {})
-                resource = certificate.get('resource', {}) if isinstance(certificate, dict) else {}
-                names = resource.get('names', []) if isinstance(resource, dict) else []
-                # Requested flat fields are returned by some schema revisions.
-                fields = hit.get('fields', {})
-                if not names and isinstance(fields, dict):
-                    names = fields.get('cert.names', [])
-                if isinstance(names, str):
-                    names = [names]
-                candidates.extend(json.dumps({'host': value}) for value in names if isinstance(value, str))
-            names, observations = _observations(candidates, name, root, limit)
-            return _result(name, root, 'partial', names, observations,
-                           limitations=['One search page of at most 100 certificate hits; consumes account credits; certificate names are historical evidence'])
-        except Exception as error:
-            return _result(name, root, 'failed', reason=type(error).__name__)
-    elif name == 'commoncrawl':
+    if name in {'securitytrails', 'censys'}:
+        return _result(name, root, 'disabled', reason='Paid/account-dependent services are disabled in the free-only edition')
+    if name == 'commoncrawl':
         try:
             indexes = _fetch_json('https://index.commoncrawl.org/collinfo.json', {}, timeout)
             # Endpoint comes from provider data but must still stay on the official origin.
@@ -483,12 +446,6 @@ def collect_source(name, root, timeout=30, limit=1000):
             return _result(name, root, 'failed', reason=type(error).__name__)
     else:
         raise ValueError('Unknown source')
-    if name == 'securitytrails':
-        try:
-            data = _fetch_json(url, headers, timeout)
-            lines = [json.dumps({'host': label + '.' + root}) for label in data.get('subdomains', []) if isinstance(label, str)]
-        except Exception as error:
-            return _result(name, root, 'failed', reason=type(error).__name__)
     names, observations = _observations(lines, name, root, limit)
     return _result(name, root, 'partial', names, observations,
                    limitations=['Single bounded page/latest crawl; not exhaustive; historical evidence is not current DNS validity'])

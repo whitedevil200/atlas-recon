@@ -1,0 +1,182 @@
+{
+  "linux_amd64": {
+    "subfinder": {
+      "version": "v2.17.0",
+      "url": "https://github.com/projectdiscovery/subfinder/releases/download/v2.17.0/subfinder_2.17.0_linux_amd64.zip",
+      "sha256": "a39c3e5c7a26ef3c430915c4d6cbf7716a00f26769a75e9405aba796142eba37",
+      "size": 10308162,
+      "repository": "https://github.com/projectdiscovery/subfinder",
+      "license": "MIT"
+    },
+    "dnsx": {
+      "version": "v1.3.1",
+      "url": "https://github.com/projectdiscovery/dnsx/releases/download/v1.3.1/dnsx_1.3.1_linux_amd64.zip",
+      "sha256": "438b964653056dd51dcfe614b1a16f8bced3cc48a1d27bc07cc6fdf2ef2a9533",
+      "size": 9829391,
+      "repository": "https://github.com/projectdiscovery/dnsx",
+      "license": "MIT"
+    },
+    "alterx": {
+      "version": "v0.1.0",
+      "url": "https://github.com/projectdiscovery/alterx/releases/download/v0.1.0/alterx_0.1.0_linux_amd64.zip",
+      "sha256": "ffae5b25138cb27b58900b9b5849e02d0390385fce404252d32e469f2a0e97ac",
+      "size": 7227762,
+      "repository": "https://github.com/projectdiscovery/alterx",
+      "license": "MIT"
+    },
+    "httpx": {
+      "version": "v1.12.0",
+      "url": "https://github.com/projectdiscovery/httpx/releases/download/v1.12.0/httpx_1.12.0_linux_amd64.zip",
+      "sha256": "9d8439e8b6c9aa7d1e2314817a392e00d5178da3af5652f7475f88868f418f76",
+      "size": 19200026,
+      "repository": "https://github.com/projectdiscovery/httpx",
+      "license": "MIT"
+    },
+    "tlsx": {
+      "version": "v1.4.0",
+      "url": "https://github.com/projectdiscovery/tlsx/releases/download/v1.4.0/tlsx_1.4.0_linux_amd64.zip",
+      "sha256": "05628cec246e292e2f9afc6e7bc5de95aaa0fbe78fd556d5ad220b9f4702d364",
+      "size": 10517606,
+      "repository": "https://github.com/projectdiscovery/tlsx",
+      "license": "MIT"
+    },
+    "katana": {
+      "version": "v1.8.0",
+      "url": "https://github.com/projectdiscovery/katana/releases/download/v1.8.0/katana_1.8.0_linux_amd64.zip",
+      "sha256": "cb027ae99d0757061b70c07a15c7a80f62c5a535ab52c4a329f80c4b0a7309d2",
+      "size": 31910234,
+      "repository": "https://github.com/projectdiscovery/katana",
+      "license": "MIT"
+    },
+    "findomain": {
+      "version": "10.0.1",
+      "url": "https://github.com/Findomain/Findomain/releases/download/10.0.1/findomain-linux.zip",
+      "sha256": "7a1b90aaf291868e0fb2d643cefa238caddb7aa932b2355f0e0ce8b47a4b5083",
+      "size": 8053918,
+      "repository": "https://github.com/Findomain/Findomain",
+      "license": "GPL-3.0",
+      "license_resource": "findomain-LICENSE.txt",
+      "source_url": "https://github.com/Findomain/Findomain/archive/refs/tags/10.0.1.tar.gz"
+    }
+  },
+  "linux_arm64": {
+    "subfinder": {
+      "version": "v2.17.0",
+      "url": "https://github.com/projectdiscovery/subfinder/releases/download/v2.17.0/subfinder_2.17.0_linux_arm64.zip",
+      "sha256": "24913d49dddc1d3a5e99a4a7580da5be980959b9415b96f52c4f7f4124392190",
+      "size": 9378288,
+      "repository": "https://github.com/projectdiscovery/subfinder",
+      "license": "MIT"
+    },
+    "dnsx": {
+      "version": "v1.3.1",
+      "url": "https://github.com/projectdiscovery/dnsx/releases/download/v1.3.1/dnsx_1.3.1_linux_arm64.zip",
+      "sha256": "dd657dd1ccee5e137eca2dbad0e97dbd067555f744adb97efcda774f1b2fbde1",
+      "size": 8943209,
+      "repository": "https://github.com/projectdiscovery/dnsx",
+      "license": "MIT"
+    },
+    "alterx": {
+      "version": "v0.1.0",
+      "url": "https://github.com/projectdiscovery/alterx/releases/download/v0.1.0/alterx_0.1.0_linux_arm64.zip",
+      "sha256": "14dfdaebfee0ecce559afacf62e9e15e9f8aa7dd8a2a659d9e0b3bc2dbb4419f",
+      "size": 6620229,
+      "repository": "https://github.com/projectdiscovery/alterx",
+      "license": "MIT"
+    },
+    "httpx": {
+      "version": "v1.12.0",
+      "url": "https://github.com/projectdiscovery/httpx/releases/download/v1.12.0/httpx_1.12.0_linux_arm64.zip",
+      "sha256": "fd7b123c1dfbc3d69f19f524e4eebcd6ec06b9a6cbd56813c76f11645197331e",
+      "size": 17927774,
+      "repository": "https://github.com/projectdiscovery/httpx",
+      "license": "MIT"
+    },
+    "tlsx": {
+      "version": "v1.4.0",
+      "url": "https://github.com/projectdiscovery/tlsx/releases/download/v1.4.0/tlsx_1.4.0_linux_arm64.zip",
+      "sha256": "b757125d94c7d0e1f1f109534f0ed88d2a4b1c3856e1fa35efc1ef9e36781b0e",
+      "size": 9557992,
+      "repository": "https://github.com/projectdiscovery/tlsx",
+      "license": "MIT"
+    },
+    "katana": {
+      "version": "v1.8.0",
+      "url": "https://github.com/projectdiscovery/katana/releases/download/v1.8.0/katana_1.8.0_linux_arm64.zip",
+      "sha256": "80e269210727a855511ffac8dfb01297b2344742acec71a35e8ba4a67a90f0f2",
+      "size": 30527878,
+      "repository": "https://github.com/projectdiscovery/katana",
+      "license": "MIT"
+    },
+    "findomain": {
+      "version": "10.0.1",
+      "url": "https://github.com/Findomain/Findomain/releases/download/10.0.1/findomain-aarch64.zip",
+      "sha256": "780056cba200722f49628bf89b5cd42f3927e694bd383af679d72cf96efc1621",
+      "size": 7768646,
+      "repository": "https://github.com/Findomain/Findomain",
+      "license": "GPL-3.0",
+      "license_resource": "findomain-LICENSE.txt",
+      "source_url": "https://github.com/Findomain/Findomain/archive/refs/tags/10.0.1.tar.gz"
+    }
+  },
+  "windows_amd64": {
+    "subfinder": {
+      "version": "v2.17.0",
+      "url": "https://github.com/projectdiscovery/subfinder/releases/download/v2.17.0/subfinder_2.17.0_windows_amd64.zip",
+      "sha256": "a3fd612928d591fb31c1e59a2e06055e364421ba32251e553073f5673a2d3103",
+      "size": 10578907,
+      "repository": "https://github.com/projectdiscovery/subfinder",
+      "license": "MIT"
+    },
+    "dnsx": {
+      "version": "v1.3.1",
+      "url": "https://github.com/projectdiscovery/dnsx/releases/download/v1.3.1/dnsx_1.3.1_windows_amd64.zip",
+      "sha256": "112c2d62d67d26a1b940ed9d10d500d2aa1ee3e3e18393d181ac4969936b9d96",
+      "size": 10077681,
+      "repository": "https://github.com/projectdiscovery/dnsx",
+      "license": "MIT"
+    },
+    "alterx": {
+      "version": "v0.1.0",
+      "url": "https://github.com/projectdiscovery/alterx/releases/download/v0.1.0/alterx_0.1.0_windows_amd64.zip",
+      "sha256": "d50bd6d18bc3333300e30e78b1419afbaeab50633232423c585667182c311c37",
+      "size": 7440104,
+      "repository": "https://github.com/projectdiscovery/alterx",
+      "license": "MIT"
+    },
+    "httpx": {
+      "version": "v1.12.0",
+      "url": "https://github.com/projectdiscovery/httpx/releases/download/v1.12.0/httpx_1.12.0_windows_amd64.zip",
+      "sha256": "14d8ccaa2d95ce9365162682f1a2ba3f14d2000bb4bfb0924af65ec5163ae021",
+      "size": 18633379,
+      "repository": "https://github.com/projectdiscovery/httpx",
+      "license": "MIT"
+    },
+    "tlsx": {
+      "version": "v1.4.0",
+      "url": "https://github.com/projectdiscovery/tlsx/releases/download/v1.4.0/tlsx_1.4.0_windows_amd64.zip",
+      "sha256": "5648fb4a81851e6349196cbb3274589b0edd9ca3021c2b62370234eea51a1dce",
+      "size": 10745119,
+      "repository": "https://github.com/projectdiscovery/tlsx",
+      "license": "MIT"
+    },
+    "katana": {
+      "version": "v1.8.0",
+      "url": "https://github.com/projectdiscovery/katana/releases/download/v1.8.0/katana_1.8.0_windows_amd64.zip",
+      "sha256": "8013253e3092e08524527a5c3f7ebd70747acc4bb51414858f8e6dffeb17f907",
+      "size": 17224143,
+      "repository": "https://github.com/projectdiscovery/katana",
+      "license": "MIT"
+    },
+    "findomain": {
+      "version": "10.0.1",
+      "url": "https://github.com/Findomain/Findomain/releases/download/10.0.1/findomain-windows.exe.zip",
+      "sha256": "25431d805572cb99ba2d9a1a3506866d1262bfb6e268a492b4ae1701b4029687",
+      "size": 5663900,
+      "repository": "https://github.com/Findomain/Findomain",
+      "license": "GPL-3.0",
+      "license_resource": "findomain-LICENSE.txt",
+      "source_url": "https://github.com/Findomain/Findomain/archive/refs/tags/10.0.1.tar.gz"
+    }
+  }
+}

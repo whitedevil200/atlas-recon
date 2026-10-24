@@ -18,6 +18,10 @@ if errorlevel 1 exit /b 2
 if errorlevel 1 exit /b 2
 "%~dp0.venv-windows\Scripts\python.exe" -m pip install --no-deps "%~dp0."
 if errorlevel 1 exit /b 2
+if "%ATLAS_SKIP_ENGINES%"=="1" goto complete
+"%~dp0.venv-windows\Scripts\python.exe" "%~dp0atlas.py" setup-engines
+if errorlevel 1 exit /b 2
+:complete
 echo Installed. In PowerShell, run .\atlas.cmd to open the colorful menu.
 echo Run .\atlas.cmd doctor to check dependencies.
 exit /b 0

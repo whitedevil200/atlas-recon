@@ -56,7 +56,7 @@ def add_commands(commands):
     engine.add_argument('--import-file', help='existing structured engine output (required for Amass v5)')
     engine.add_argument('--permutations', help='reviewed permutation dictionary for Gotator')
     source = commands.add_parser('source', help='collect a bounded complementary passive source')
-    source.add_argument('name', choices=['commoncrawl', 'securitytrails', 'censys'])
+    source.add_argument('name', choices=['commoncrawl'])
     source.add_argument('-d', '--domain', required=True)
     source.add_argument('--limit', type=int, default=1000)
     source.add_argument('--timeout', type=int, default=10)

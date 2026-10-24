@@ -1,3 +1,7 @@
+> Version 2.1 supersedes the 2.0 provider/installation entries below: seven free
+> engines install automatically; Censys, SecurityTrails and Chaos are disabled.
+> See README and ENGINES.md for current commands. Other 2.0 features remain.
+
 # ATLAS 2.0: implemented features and upgrade guide
 
 Version 2.0 extends the existing Bash/Python terminal workflow. It keeps the full

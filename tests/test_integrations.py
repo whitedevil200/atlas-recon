@@ -128,39 +128,21 @@ class IntegrationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'authorization'):
             api.owner_inventory('aws', 'example.com', [])
 
-    def test_securitytrails_auth_missing(self):
-        with patch.dict(os.environ, {}, clear=True), patch.object(api, '_fetch_json') as fetch:
-            self.assertEqual(api.collect_source('securitytrails', 'example.com')['state'], 'auth_required')
+    def test_paid_sources_disabled_even_with_credentials(self):
+        with patch.dict(os.environ, {'SECURITYTRAILS_API_KEY': 'secret', 'CENSYS_PAT': 'secret', 'CENSYS_SEARCH_ENABLED': '1'}), patch.object(api, '_fetch_json') as fetch:
+            for name in ('securitytrails', 'censys'):
+                self.assertEqual(api.collect_source(name, 'example.com')['state'], 'disabled')
             fetch.assert_not_called()
 
-    def test_securitytrails_normalized_and_partial(self):
-        with patch.dict(os.environ, {'SECURITYTRAILS_API_KEY': 'secret'}), \
-                patch.object(api, '_fetch_json', return_value={'subdomains': ['api', 'dev']}):
-            result = api.collect_source('securitytrails', 'example.com', limit=1)
-            self.assertEqual(result['hosts'], ['api.example.com'])
-            self.assertEqual(result['state'], 'partial')
-            self.assertNotIn('secret', json.dumps(result))
+    def test_chaos_account_service_disabled(self):
+        with patch.dict(os.environ, {'PDCP_API_KEY': 'secret'}), patch.object(api, '_execute') as execute:
+            self.assertEqual(api.run_engine('chaos', [], 'example.com', '.')['state'], 'disabled')
+            execute.assert_not_called()
 
-    def test_censys_requires_credits_consent(self):
-        with patch.dict(os.environ, {'CENSYS_PAT': 'secret'}, clear=True), patch.object(api, '_fetch_json') as fetch:
-            self.assertEqual(api.collect_source('censys', 'example.com')['state'], 'consent_required')
-            fetch.assert_not_called()
-
-    def test_censys_v3_body_and_certificate_schema(self):
-        fixture = {'result': {'hits': [{'certificate_v1': {'resource': {'names': ['a.example.com', 'outside.org']}}}]}}
-        with patch.dict(os.environ, {'CENSYS_PAT': 'secret', 'CENSYS_SEARCH_ENABLED': '1'}, clear=True), \
-                patch.object(api, '_fetch_json', return_value=fixture) as fetch:
-            result = api.collect_source('censys', 'example.com', limit=1000)
-            self.assertEqual(result['hosts'], ['a.example.com'])
-            args = fetch.call_args.args
-            self.assertEqual(args[0], 'https://api.platform.censys.io/v3/global/search/query')
-            self.assertEqual(args[3]['page_size'], 100)
-            self.assertEqual(args[3]['query'], 'cert.names: "example.com"')
-
-    def test_censys_schema_failure_is_visible(self):
-        with patch.dict(os.environ, {'CENSYS_PAT': 'secret', 'CENSYS_SEARCH_ENABLED': '1'}), \
-                patch.object(api, '_fetch_json', return_value={'unexpected': []}):
-            self.assertEqual(api.collect_source('censys', 'example.com')['state'], 'schema_error')
+    def test_subfinder_only_queries_keyless_sources(self):
+        command = api.build_command('subfinder', 'subfinder', 'input', 'example.com', 5, 10, {})
+        self.assertNotIn('-all', command)
+        self.assertEqual(command[command.index('-s') + 1], 'crtsh,waybackarchive,rapiddns,digitorus,shodanct')
 
     def test_commoncrawl_rejects_foreign_index_endpoint(self):
         with patch.object(api, '_fetch_json', return_value=[{'cdx-api': 'https://evil.org/'}]), \

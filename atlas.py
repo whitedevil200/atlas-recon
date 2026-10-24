@@ -21,8 +21,10 @@ import urllib.parse
 import urllib.request
 import urllib.error
 import run_state
+import engine_bundle
+engine_bundle.activate()
 
-VERSION = '2.0.0'
+VERSION = '2.1.0'
 BASE = Path(__file__).resolve().parent
 from importlib.resources import files as resource_files
 DEFAULT_WORDLIST = resource_files('atlas_data').joinpath('starter.txt')
@@ -659,10 +661,10 @@ class Run:
                     self.record(source, 'failed', str(error))
             else:
                 commands = {
-                    'subfinder': ['subfinder', '-d', self.root, '-all', '-silent', '-oJ', '-cs',
+                    'subfinder': ['subfinder', '-d', self.root, '-s', 'crtsh,waybackarchive,rapiddns,digitorus,shodanct', '-silent', '-oJ', '-cs',
                                   '-rl', str(self.args.rate), '-duc'],
                     'assetfinder': ['assetfinder', '--subs-only', self.root],
-                    'findomain': ['findomain', '-t', self.root, '-q'],
+                    'findomain': ['findomain', '-t', self.root, '-q', '--exclude-sources', 'certspotter,facebook,spyse,virustotalapikey,urlscan,securitytrails,c99,bufferover_free,bufferover_paid'],
                 }
                 text = self.tool(source, commands[source])
                 if text:
@@ -856,6 +858,33 @@ class Run:
             run_state.atomic_json(self.out / 'httpx-result.json', result)
             self.record('httpx', result['state'], result.get('detail', 'HTTP observations saved'))
 
+    def free_engine_enrichment(self):
+        import integrations
+        engines = ['dnsx'] + (['httpx', 'tlsx'] if self.args.http else [])
+        for name in engines:
+            stage = 'bundle:' + name
+            if self.progress.get(stage) == 'done':
+                continue
+            self.budget()
+            remaining = self.args.max_seconds - self._elapsed - (time.monotonic() - self._started)
+            targets = sorted(n for n in self.names if scoped(n, self.root, self.exclusions))[:min(self.args.max_candidates, 10000)]
+            result = integrations.run_engine(name, targets, self.root, self.out / 'engines' / name,
+                       timeout=max(0.1, min(600, self.args.tool_timeout, remaining)),
+                       rate=min(100, self.args.rate), extra_options={'limit': min(self.args.max_candidates, 10000)})
+            destination = self.out / 'engines' / name
+            destination.mkdir(parents=True, exist_ok=True)
+            run_state.atomic_json(destination / 'result.json', result)
+            for observation in result.get('observations', []):
+                host = observation['hostname'] if 'hostname' in observation else observation.get('host')
+                if host in self.names:
+                    self.dns.setdefault(host, {'status': 'passive-unverified', 'records': {}}).setdefault('enrichment', {}).setdefault(name, []).append(observation)
+            state = 'ok' if result['state'] in ('complete', 'ok') else result['state']
+            self.record(stage, state, result.get('reason', 'Free bundled engine; upstream DNS queries are outside the built-in query counter'))
+            say(name + ': ' + result['state'] + ' | ' + str(len(result.get('observations', []))) + ' observations', 36)
+            if state == 'ok':
+                self.progress[stage] = 'done'
+            self.checkpoint()
+
     def save(self):
         rows = [{'hostname': n, 'sources': sorted(self.names[n]), 'discoveries': self.provenance.get(n, []),
                  **self.dns.get(n, {'status': 'passive-unverified', 'records': {}})} for n in sorted(self.names)]
@@ -959,7 +988,8 @@ def parser():
     scan.add_argument('-d', '--domain', required=True)
     scan.add_argument('--mode', choices=['passive', 'active'], default='passive')
     scan.add_argument('--authorized', action='store_true', help='acknowledge authorization for active DNS/HTTP checks')
-    scan.add_argument('--sources', default='crtsh,certspotter,hackertarget,wayback,subfinder,assetfinder,findomain')
+    scan.add_argument('--free-engines', action='store_true', help='run managed DNSx, plus HTTPx/TLSx with --http, and retain engine evidence (active mode)')
+    scan.add_argument('--sources', default='crtsh,certspotter,hackertarget,wayback,commoncrawl,subfinder,findomain')
     scan.add_argument('--ct-pages', type=positive, default=5, help='maximum Cert Spotter pages; provider quotas still apply')
     scan.add_argument('--ct-after', default='', help='Cert Spotter issuance cursor for continuing an earlier scan')
     scan.add_argument('--import', dest='imports', action='append', default=[], metavar='FILE', help='import text/JSON/URL evidence')
@@ -993,14 +1023,22 @@ def parser():
     scan.add_argument('--view', choices=['public', 'private'], default='public')
     scan.add_argument('--profile', choices=['quick', 'balanced', 'deep'], default='balanced')
     import workflows
+    commands.add_parser('setup-engines', help='install/update the pinned free engine bundle (no API keys)')
     workflows.add_commands(commands)
     return p
 
 def main(argv=None):
+    engine_bundle.activate()
     p = parser()
     arguments = list(sys.argv[1:] if argv is None else argv)
     if not arguments:
         arguments = ['menu']
+    if arguments and arguments[0] == 'setup-engines':
+        setup = argparse.ArgumentParser(prog='atlas setup-engines', description='Install free pinned engines; no accounts or API keys required')
+        setup.add_argument('--list', action='store_true')
+        setup.add_argument('--only', help='comma-separated engine names; defaults to the full free bundle')
+        selected = setup.parse_args(arguments[1:])
+        return engine_bundle.install(selected.only.split(',') if selected.only else None, selected.list)
     args = p.parse_args(arguments)
     if args.command == 'menu' and not args.color and 'NO_COLOR' not in os.environ:
         os.environ.setdefault('ATLAS_COLOR', 'always')
@@ -1093,7 +1131,7 @@ def main(argv=None):
                 '[13] Compare saved runs', '[14] Asset history', '[15] Resume interrupted discovery',
                 '[16] Optional repository engine', '[17] Engine versions / requirements',
                 '[18] Import owned cloud DNS inventory', '[19] Watch / change snapshots',
-                '[20] Resolver health diagnostics', '[21] Scoped HTTP/JS/CSP discovery', '[0] Exit'], 35)
+                '[20] Resolver health diagnostics', '[21] Scoped HTTP/JS/CSP discovery', '[22] Install / repair free engine bundle', '[0] Exit'], 35)
             try:
                 choice = input('atlas > ').strip()
                 if choice == '0':
@@ -1115,6 +1153,8 @@ def main(argv=None):
                     main(['export', input('Saved run directory: ').strip(), '-o', input('Save domains to file: ').strip()])
                 elif choice == '10':
                     main(['lookup', input('Saved run directory: ').strip()])
+                elif choice == '22':
+                    main(['setup-engines'])
                 elif choice in {str(n) for n in range(11, 22)}:
                     workflows.menu(choice)
                 elif choice in ('1', '2', '3', '9'):
@@ -1131,10 +1171,10 @@ def main(argv=None):
                         if wordlist:
                             options += ['--wordlist', wordlist]
                     if choice == '3':
-                        options += ['--permute', '--http']
+                        options += ['--permute', '--http', '--free-engines']
                     main(options)
                 else:
-                    say('Choose an option from 0 to 21.', 33)
+                    say('Choose an option from 0 to 22.', 33)
             except SystemExit as error:
                 if error.code:
                     say('Command input was invalid; returning to dashboard.', 33)
@@ -1145,10 +1185,10 @@ def main(argv=None):
         p.error('active mode requires --authorized')
     if args.check_live and not args.authorized:
         p.error('--check-live requires --authorized')
-    if args.mode == 'passive' and (args.http or args.permute or args.recursive_depth or args.wordlist or args.engine != 'builtin'):
+    if args.mode == 'passive' and (args.http or args.permute or args.recursive_depth or args.wordlist or args.engine != 'builtin' or args.free_engines):
         p.error('DNS generation/HTTP options require --mode active')
     allowed = {'crtsh', 'certspotter', 'hackertarget', 'wayback', 'subfinder', 'assetfinder', 'findomain',
-               'commoncrawl', 'securitytrails', 'censys'}
+               'commoncrawl'}
     if not set(args.sources.split(',')) <= allowed:
         p.error('unknown passive source; use ' + ','.join(sorted(allowed)))
     if args.mode == 'active' or args.check_live:
@@ -1157,7 +1197,7 @@ def main(argv=None):
         except ImportError:
             p.error('install requirements.txt for active mode')
     if args.profile == 'quick':
-        args.sources = 'certspotter,subfinder' if args.sources == 'crtsh,certspotter,hackertarget,wayback,subfinder,assetfinder,findomain' else args.sources
+        args.sources = 'certspotter,subfinder' if args.sources == 'crtsh,certspotter,hackertarget,wayback,commoncrawl,subfinder,findomain' else args.sources
         args.ct_pages = min(args.ct_pages, 2)
         args.max_candidates = min(args.max_candidates, 1000)
     elif args.profile == 'deep':
@@ -1181,6 +1221,8 @@ def execute_scan(args):
             run.passive()
         if args.mode == 'active' and run.progress.get('active') != 'done':
             run.active()
+        if getattr(args, 'free_engines', False) and not args.offline:
+            run.free_engine_enrichment()
         run._state = 'complete'
         run.save()
         lookup_after_scan = args.lookup if args.lookup is not None else (sys.stdin.isatty() and sys.stdout.isatty())

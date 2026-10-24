@@ -22,7 +22,7 @@ def run(args, cwd, env):
 def main():
     source = Path(__file__).resolve().parents[1]
     modules = ['atlas', 'availability', 'lookups', 'dns_evidence', 'inventory',
-               'integrations', 'workflows', 'run_state']
+               'integrations', 'workflows', 'run_state', 'engine_bundle']
     with tempfile.TemporaryDirectory(prefix='atlas-wheel-check-') as temporary:
         base = Path(temporary)
         build = base / 'source'
@@ -43,7 +43,7 @@ def main():
         with zipfile.ZipFile(wheel) as archive:
             names = set(archive.namelist())
             expected = {module + '.py' for module in modules} | {
-                'atlas_data/__init__.py', 'atlas_data/starter.txt', 'atlas_data/atlas.1'}
+                'atlas_data/__init__.py', 'atlas_data/starter.txt', 'atlas_data/atlas.1', 'atlas_data/engines.lock.json'}
             if expected - names:
                 raise RuntimeError('Wheel missing files: ' + ', '.join(sorted(expected - names)))
             if not any(name.endswith('/share/man/man1/atlas.1') for name in names):

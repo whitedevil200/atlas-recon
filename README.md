@@ -9,6 +9,46 @@
 
 ATLAS is a colorful **CLI reconnaissance workspace** for scoped subdomain discovery, DNS/HTTP checks and saved evidence. Discover names, read the **full numbered list**, select a subdomain by **SR NO**, run lookups or specialist engines, and compare observations over time. Linux uses a Bash menu; Windows uses a Python-backed launcher. There is no graphical dashboard.
 
+## Free engine bundle in 2.1
+
+The normal Linux/Windows installers now install **seven free engines** into ATLAS's
+managed directory: Subfinder, Findomain, DNSx, AlterX, HTTPx, TLSx and Katana.
+ATLAS automatically finds them; no Go/Rust compiler or manual PATH changes are required.
+Installation needs internet access and downloads roughly 75–100 MB depending on platform.
+Supported bundles: Linux x86_64/arm64 and Windows x86_64 (other Windows systems can use WSL).
+
+**No paid API is required.** Censys, SecurityTrails and account-dependent Chaos are
+disabled. Subfinder uses an explicit keyless-source allowlist; Findomain excludes
+account/paid sources. Free public endpoints still have quotas and outages.
+
+```bash
+# Included in bash install.sh and install-windows.cmd by default
+atlas setup-engines
+atlas setup-engines --list
+atlas engines --check
+# Within an authorized scope: native DNS + DNSx, AlterX and HTTPx/TLSx evidence
+atlas scan -d example.com --mode active --authorized --permute --http --free-engines
+# Katana remains an explicit crawl action on selected saved assets
+atlas engine katana RUN --serial 1-3 --authorized --rate 5
+```
+
+In PowerShell use `.\atlas.cmd` instead of `atlas`. Menu **22** installs/repairs
+the bundle; menu **3** enables the advanced free-engine pipeline. Normal passive
+scans use bundled Subfinder/Findomain automatically. AlterX runs with `--permute`;
+DNSx and HTTPx/TLSx enrichment run with `--free-engines` (TLS/HTTP additionally
+need `--http`). Offline scans do not launch the enrichment pipeline.
+The other open-source interoperability adapters remain optional/manual;
+**this is a seven-engine bundle, not an all-17-engine distribution**.
+
+Versions, OS/architecture, download URLs, sizes and archive SHA-256 values are
+pinned in `atlas_data/engines.lock.json`. Installation verifies the archive before
+extracting a single executable, records the binary hash and upstream notices,
+and can safely retry a failed download. Re-running setup checks installed hashes.
+`ATLAS_ENGINE_HOME` selects a different managed directory. For a minimal core-only
+installation set `ATLAS_SKIP_ENGINES=1` before running the installer.
+Binary downloads happen during setup, never implicitly during a scan. Upstream
+licenses still apply; ATLAS does not relicense their executables.
+
 ## What's new in 2.0
 
 - SQLite inventory with stable asset IDs, observation history and source records.
@@ -16,8 +56,8 @@ ATLAS is a colorful **CLI reconnaissance workspace** for scoped subdomain discov
 - Bounded DNS recursion and generation, TTL-aware caches, DNS response/error states, resolver metrics and optional trusted-resolver comparison.
 - Unified evidence cards and batch selection such as `2,5,8-12`.
 - Coverage-aware diffs, persistent watch snapshots, incremental CT cursors and an opt-in notification outbox.
-- **17 optional repository adapters:** 16 executable profiles plus Amass JSONL import. Separate HTTP/TLS, DNS, passive discovery, mutation and crawl profiles expose explicit actions rather than silently installing upstream engines.
-- Native Common Crawl, SecurityTrails and Censys Platform source actions; read-only imports of AWS Route53, Cloudflare and Google Cloud DNS exports.
+- **17 repository references:** free executable/import profiles plus a disabled Chaos compatibility record. Separate HTTP/TLS, DNS, passive discovery, mutation and crawl profiles expose explicit actions rather than silently installing upstream engines.
+- Native free Common Crawl source actions; read-only imports of AWS Route53, Cloudflare and Google Cloud DNS exports.
 - Scoped HTTP/JavaScript/CSP candidate discovery, explainable review leads, portable Python packaging and a hashed runtime dependency lock.
 
 See the [2.0 implementation matrix and upgrade notes](docs/UPGRADE-2.md),
@@ -169,6 +209,7 @@ See [Windows troubleshooting](WINDOWS-QUICKSTART.md). You can fully extract a [r
 | 15 | Resume interrupted discovery or availability checks |
 | 16 | Run an optional repository engine on saved scope |
 | 17 | Engine versions and configuration requirements |
+| 22 | Install / repair seven free engines |
 | 18 | Import owned cloud DNS inventory |
 | 19 | Watch and save change snapshots |
 | 20 | Resolver connectivity and response diagnostics |
@@ -337,14 +378,14 @@ atlas owner-import aws route53.json -d example.com --authorized --view private
 atlas crawl RUN --serial 1-3 --authorized --requests 20 --depth 1
 ```
 
-The 16 executable profiles are Subfinder, Assetfinder, Findomain, DNSx, PureDNS,
-MassDNS, ShuffleDNS, AlterX, Gotator, HTTPx, TLSx, BBOT 3.x, Chaos, Notify, Katana
-and BadDNS. **Amass is existing compatible JSONL import only**, not live v5
+The executable profiles include Subfinder, Assetfinder, Findomain, DNSx, PureDNS,
+MassDNS, ShuffleDNS, AlterX, Gotator, HTTPx, TLSx, BBOT 3.x, Notify, Katana and
+BadDNS. Chaos is disabled in the free-only edition. **Amass is existing compatible JSONL import only**, not live v5
 execution. Notify delivery is exposed through `watch --notify`, not arbitrary
 engine arguments. All are optional; [the adapter matrix](docs/ENGINES.md) declares
 actual commands, prerequisites, version checks, licenses and limitations.
 
-Subfinder/Assetfinder/Findomain/Chaos query the root domain even when rows are
+Subfinder/Assetfinder/Findomain query the root domain even when rows are
 selected. Other profiles consume selected scoped names. Mutation output is a
 candidate list, not DNS proof. Certificate SANs, aliases and redirects can mention
 outside domains as relationship evidence; they are not automatically probed.
@@ -354,12 +395,9 @@ scope and request/depth/time budgets to queued links and redirect destinations.
 Redirects can be queued within the selected crawl depth; each fetched destination
 is checked again rather than blindly following HTTP redirects.
 
-SecurityTrails requires `SECURITYTRAILS_API_KEY`. Censys Platform requires
-`CENSYS_PAT`, eligible search access and `CENSYS_SEARCH_ENABLED=1` to acknowledge
-credit consumption; `CENSYS_ORGANIZATION_ID` is optional. Native source actions
-retain a bounded page and label incomplete coverage; `partial` may return a
-nonzero code while preserving useful results. Common Crawl uses the latest
-listed crawl, not all historical indexes.
+Paid/account-dependent native sources are disabled even if API credentials are
+present. Common Crawl uses one bounded latest-crawl page; `partial` can return a
+nonzero code while retaining evidence.
 
 Owner imports accept read-only DNS JSON exports from AWS Route53, Cloudflare and
 Google Cloud DNS. They do not contact cloud APIs, discover credentials, write
@@ -443,19 +481,11 @@ Background checks create a separate checked run and preserve completed results o
 
 ## Optional external tools
 
-Built-in sources/checks work without these executables. Use the instruction-only
-[pinned release guide](scripts/install-engines.sh), review upstream release notes
-and licenses, verify publisher checksums/signatures, then run `atlas engines
---check`. The helper does not download or execute installers. See the complete
-[adapter matrix and installation links](docs/ENGINES.md).
-
-- [Subfinder](https://github.com/projectdiscovery/subfinder): provider keys can broaden coverage.
-- [Findomain](https://github.com/Findomain/Findomain): install an official OS/architecture release.
-- [PureDNS](https://github.com/d3mondev/puredns): requires [massdns](https://github.com/blechschmidt/massdns) and resolver lists.
-- [AlterX](https://github.com/projectdiscovery/alterx): optional permutation generation.
-- [ProjectDiscovery httpx](https://github.com/projectdiscovery/httpx): optional active-mode metadata via `--http`; different from Python's httpx package.
-
-Upstream flags/runtime requirements can change. Pin reviewed release tags for reproducible use. External code is invoked separately, not bundled or relicensed.
+Built-in sources/checks work without external engines. The normal installers
+install the seven-engine free bundle automatically. Use `atlas setup-engines` to
+repair it and `atlas engines --check` to inspect versions. Other free engines,
+including PureDNS/MassDNS and BBOT, remain optional manual adapters with their
+own runtime/configuration requirements. See [the adapter matrix](docs/ENGINES.md).
 
 ## Help, tests and troubleshooting
 
