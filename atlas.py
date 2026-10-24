@@ -24,7 +24,7 @@ import run_state
 import engine_bundle
 engine_bundle.activate()
 
-VERSION = '2.1.0'
+VERSION = '2.1.1'
 BASE = Path(__file__).resolve().parent
 from importlib.resources import files as resource_files
 DEFAULT_WORDLIST = resource_files('atlas_data').joinpath('starter.txt')
@@ -850,7 +850,7 @@ class Run:
             self.metrics['resolvers'] = self.dns_client.health()
         self.progress['active'] = 'done'
         self.record('dns', 'ok', f'{len(done)} candidates tested; suspects and disagreements retained')
-        if self.args.http:
+        if self.args.http and not getattr(self.args, 'free_engines', False):
             import integrations
             selected = [n for n in self.dns if self.dns[n]['status'] == 'resolved']
             result = integrations.run_engine('httpx', selected, self.root, self.out / 'engines',
@@ -868,6 +868,13 @@ class Run:
             self.budget()
             remaining = self.args.max_seconds - self._elapsed - (time.monotonic() - self._started)
             targets = sorted(n for n in self.names if scoped(n, self.root, self.exclusions))[:min(self.args.max_candidates, 10000)]
+            if name in {'httpx', 'tlsx'}:
+                targets = [n for n in targets if self.dns.get(n, {}).get('status') == 'resolved']
+            if not targets:
+                self.record(stage, 'skipped', 'No eligible scoped hosts for this engine')
+                self.progress[stage] = 'done'
+                self.checkpoint()
+                continue
             result = integrations.run_engine(name, targets, self.root, self.out / 'engines' / name,
                        timeout=max(0.1, min(600, self.args.tool_timeout, remaining)),
                        rate=min(100, self.args.rate), extra_options={'limit': min(self.args.max_candidates, 10000)})

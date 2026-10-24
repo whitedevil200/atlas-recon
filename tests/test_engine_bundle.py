@@ -84,6 +84,7 @@ class BundleTests(unittest.TestCase):
                         '--authorized', '--http', '--free-engines', '-o', directory])
             run = atlas.Run(args)
             run.add('api.example.com', 'fixture')
+            run.dns['api.example.com'] = {'status': 'resolved', 'records': {}}
             def response(name, hosts, root, output, **kwargs):
                 self.assertEqual(hosts, ['api.example.com'])
                 return {'state': 'complete', 'observations': [{'host': 'api.example.com', 'source': name,
@@ -102,6 +103,7 @@ class BundleTests(unittest.TestCase):
             args = atlas.parser().parse_args(['scan', '-d', 'example.com', '--mode', 'active',
                         '--authorized', '--free-engines', '-o', directory])
             run = atlas.Run(args)
+            run.add('api.example.com', 'fixture')
             with patch.object(integrations, 'run_engine', return_value={'state': 'timeout', 'observations': []}):
                 run.free_engine_enrichment()
             self.assertNotIn('bundle:dnsx', run.progress)
