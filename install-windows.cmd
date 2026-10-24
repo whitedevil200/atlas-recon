@@ -14,7 +14,9 @@ goto packages
 python -m venv "%~dp0.venv-windows"
 if errorlevel 1 exit /b 2
 :packages
-"%~dp0.venv-windows\Scripts\python.exe" -m pip install -r "%~dp0requirements.txt"
+"%~dp0.venv-windows\Scripts\python.exe" -m pip install --require-hashes -r "%~dp0requirements-runtime.lock"
+if errorlevel 1 exit /b 2
+"%~dp0.venv-windows\Scripts\python.exe" -m pip install --no-deps "%~dp0."
 if errorlevel 1 exit /b 2
 echo Installed. In PowerShell, run .\atlas.cmd to open the colorful menu.
 echo Run .\atlas.cmd doctor to check dependencies.

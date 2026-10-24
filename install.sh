@@ -2,7 +2,8 @@
 set -euo pipefail
 ATLAS_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 python3 -m venv "$ATLAS_ROOT/.venv"
-"$ATLAS_ROOT/.venv/bin/python" -m pip install -r "$ATLAS_ROOT/requirements.txt"
+"$ATLAS_ROOT/.venv/bin/python" -m pip install --require-hashes -r "$ATLAS_ROOT/requirements-runtime.lock"
+"$ATLAS_ROOT/.venv/bin/python" -m pip install --no-deps "$ATLAS_ROOT"
 chmod +x "$ATLAS_ROOT/atlas"
 mkdir -p "$HOME/.local/bin" "$HOME/.local/share/man/man1"
 # Wrapper resolves the project path reliably; moving the folder requires reinstalling.

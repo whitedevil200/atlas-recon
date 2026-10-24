@@ -1,5 +1,36 @@
 # Validation record
 
+## Version 2.0 — 24 October 2026
+
+125 offline unit/integration tests pass on the Windows development host with
+Python 3.14.3. Coverage includes all legacy flows plus SQLite durability/history,
+stable IDs and numbering, interrupted/partial process recovery, discovery and
+availability resume, unchanged input manifests, pending-only checks, source/API
+schemas, owner exports/views, engine configuration and scope, notification outbox
+recovery with mocked delivery, DNS error distinctions/TTL caching/wildcards,
+trusted comparison, resolver quarantine/adaptive rate, and HTTP/TLS evidence.
+
+A clean installed-wheel smoke check passed outside the checkout, verifying the
+console entry point, every module, bundled wordlist/man page and an offline
+two-name scan. The runtime lock was resolved for Python 3.10 and hash-checked
+on the local interpreter. No public target collection was needed for this upgrade.
+
+Three real loopback DNS lab executions each passed 10 assertions, with 39 DNS
+packets matching client counts. The lab uses an ephemeral localhost port,
+documentation addresses and controlled DNS wire responses, not public targets.
+See docs/BENCHMARK.md for measurements and limitations.
+
+External repository adapters have mocked command/schema tests. Their presence
+does not establish that all optional executables are installed or live-tested.
+Amass integration is explicit structured export import; cloud DNS integration
+imports owner-authorized exports rather than making cloud account changes.
+Linux/Windows Python 3.10/3.13 CI includes the full suite, loopback lab,
+installed wheel, bundled resources, Linux installer and Bash menu workflows.
+
+The implementation matrix in docs/UPGRADE-2.md describes remaining boundaries;
+there is no claim of internet-wide completeness, comparative superiority or
+absence of all possible third-party failures.
+
 ## Version 1.6.1 — post-discovery selection
 
 41 tests pass locally. New checks verify automatic lookup offers in interactive

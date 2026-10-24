@@ -18,9 +18,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install -r requirements.txt
+      - run: python -m pip install --require-hashes -r requirements-runtime.lock
       - run: python -m unittest discover -s tests -v
-      - run: python -m py_compile atlas.py availability.py lookups.py
+      - name: Controlled loopback DNS lab
+        run: python scripts/benchmark-lab.py --output lab-benchmark.json
+      - run: python -m py_compile atlas.py availability.py lookups.py dns_evidence.py inventory.py integrations.py workflows.py run_state.py
+      - name: Installed wheel and bundled-resource smoke check
+        run: python scripts/check-wheel.py
       - name: Bash syntax and menu smoke check
         if: runner.os == 'Linux'
         shell: bash
@@ -35,6 +39,10 @@ jobs:
           printf '\n' | python atlas.py scan -d example.com --offline --import /tmp/atlas-ci-names.txt --lookup -o /tmp/atlas-ci-lookup
           atlas_run_directory=(results/example.com-*)
           printf '10\n%s\nq\n\n0\n' "${atlas_run_directory[0]}" | bash atlas
+          bash atlas health "${atlas_run_directory[0]}"
+          bash atlas evidence "${atlas_run_directory[0]}" --serial 1
+          bash atlas resume "${atlas_run_directory[0]}" --no-lookup
+          bash scripts/install-engines.sh --list
       - name: Windows launcher smoke check
         if: runner.os == 'Windows'
         shell: pwsh

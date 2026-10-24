@@ -56,6 +56,17 @@ atlas_menu() {
     atlas_line "$ATLAS_YELLOW" '  [8] Save all domains to a file'
     atlas_line "$ATLAS_MAGENTA" '  [9] Discover + background availability checks'
     atlas_line "$ATLAS_CYAN" '  [10] WHOIS / IP / reverse IP by SR NO'
+    atlas_line "$ATLAS_GREEN" '  [11] Unified evidence cards / batch selection'
+    atlas_line "$ATLAS_YELLOW" '  [12] Provider health / budgets'
+    atlas_line "$ATLAS_MAGENTA" '  [13] Compare saved inventories'
+    atlas_line "$ATLAS_CYAN" '  [14] Asset history'
+    atlas_line "$ATLAS_GREEN" '  [15] Resume interrupted discovery'
+    atlas_line "$ATLAS_YELLOW" '  [16] Optional repository engine'
+    atlas_line "$ATLAS_MAGENTA" '  [17] Engine versions / requirements'
+    atlas_line "$ATLAS_CYAN" '  [18] Import owned cloud DNS export'
+    atlas_line "$ATLAS_GREEN" '  [19] Watch / change snapshots'
+    atlas_line "$ATLAS_YELLOW" '  [20] Resolver diagnostics'
+    atlas_line "$ATLAS_MAGENTA" '  [21] Scoped HTTP/JS/CSP discovery'
     atlas_line "$ATLAS_BLUE" '  [0] Exit'
     atlas_line "$ATLAS_BLUE" '============================================================'
     printf '%satlas > %s' "$ATLAS_GREEN" "$ATLAS_RESET"
@@ -64,6 +75,7 @@ atlas_menu() {
       0) return 0 ;;
       4) atlas_run doctor ;;
       5) atlas_run --help ;;
+      11|12|13|14|15|16|17|18|19|20|21) atlas_run menu-action "$atlas_choice" ;;
       10)
         read -r -p 'Saved run directory: ' atlas_directory || return 0
         atlas_run lookup "$atlas_directory"
@@ -101,7 +113,7 @@ atlas_menu() {
         fi
         atlas_run "${atlas_args[@]}"
         ;;
-      *) atlas_line "$ATLAS_YELLOW" 'Choose an option from 0 to 10.'; continue ;;
+      *) atlas_line "$ATLAS_YELLOW" 'Choose an option from 0 to 21.'; continue ;;
     esac
     read -r -p 'Press Enter to return to the menu: ' atlas_pause || return 0
   done

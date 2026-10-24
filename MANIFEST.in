@@ -1,0 +1,9 @@
+include LICENSE README.md THIRD_PARTY.md
+include atlas install.sh install-windows.cmd atlas.cmd requirements.txt
+include requirements-runtime.lock
+recursive-include atlas_data *.txt *.1
+recursive-include man *.1
+recursive-include wordlists *.txt
+recursive-include scripts *.sh
+recursive-include docs *.md
+recursive-include tests *.py

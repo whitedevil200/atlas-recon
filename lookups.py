@@ -131,7 +131,18 @@ def legacy_whois(hostname, timeout):
             'retrieved_at': utcnow(), 'raw_text': result.stdout[:MAX_BODY]}
 
 
-def dns_records(hostname, timeout, kinds=('A', 'AAAA', 'CNAME')):
+def dns_records(hostname, timeout, kinds=('A', 'AAAA', 'CNAME'), client=None):
+    if client is not None:
+        from dns_evidence import classify
+        observations = client.resolve(hostname, kinds)
+        return {'records': observations,
+                'errors': {kind: row['state'] + ': ' + '; '.join(row['errors'])
+                           for kind, row in observations.items()
+                           if row['state'] not in ('ANSWER', 'NXDOMAIN', 'NODATA')},
+                'checked_at': utcnow(), 'source': 'bounded DNS evidence client',
+                'dns_state': classify(observations), 'dns_evidence': observations,
+                'trust_disagreements': [kind for kind, row in observations.items()
+                                        if row.get('verification', {}).get('state') == 'DISAGREES']}
     import dns.exception
     import dns.resolver
     resolver = dns.resolver.Resolver()
@@ -149,6 +160,28 @@ def dns_records(hostname, timeout, kinds=('A', 'AAAA', 'CNAME')):
     return {'records': records, 'errors': errors, 'checked_at': utcnow(), 'source': 'system DNS resolver'}
 
 
+def inspect_selected(hostname, timeout=8, client=None, srv_services=()):
+    """Read modern records on one selected owner; service names are explicit.
+
+    SRV owners use caller-provided prefixes (e.g. _sip._tcp), not guessing.
+    Returned targets remain evidence; this helper never probes or expands them.
+    """
+    from dns_evidence import DNSClient, normalize_name
+    hostname = normalize_name(hostname)
+    client = client or DNSClient(timeout=timeout, rate=10, max_queries=256)
+    result = dns_records(hostname, timeout,
+                         ('A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'CAA', 'SOA', 'SRV', 'SVCB', 'HTTPS'), client)
+    services = {}
+    for prefix in list(srv_services)[:16]:
+        if not re.fullmatch(r'_[a-zA-Z0-9-]+\._(?:tcp|udp|sctp)', prefix):
+            raise ValueError('SRV prefix must have the form _service._tcp, _udp or _sctp')
+        owner = prefix.lower() + '.' + hostname
+        services[owner] = client.query(owner, 'SRV')
+    result['services'] = services
+    result['resolver_health'] = client.health()
+    return result
+
+
 def addresses(dns):
     found = set()
     for kind in ('A', 'AAAA'):
@@ -157,9 +190,9 @@ def addresses(dns):
     return sorted(found, key=lambda x: (ipaddress.ip_address(x).version, int(ipaddress.ip_address(x))))
 
 
-def ptr_lookup(ip, timeout):
+def ptr_lookup(ip, timeout, client=None):
     import dns.reversename
-    return dns_records(str(dns.reversename.from_address(ip)), timeout, ('PTR',))
+    return dns_records(str(dns.reversename.from_address(ip)), timeout, ('PTR',), client)
 
 
 def ip_rdap(ip, cache, timeout):
@@ -230,7 +263,7 @@ def local_neighbours(ip, rows):
 
 
 def enrich(hostname, root, rows, kind, directory, timeout=8, max_ips=8,
-           refresh=False, no_external=False, legacy=False, exclusions=()):
+           refresh=False, no_external=False, legacy=False, exclusions=(), dns_client=None):
     from atlas import normalize, scoped
     if normalize(hostname) != hostname or not scoped(hostname, root, exclusions):
         raise ValueError('selected hostname is outside the saved scope or invalid')
@@ -243,8 +276,10 @@ def enrich(hostname, root, rows, kind, directory, timeout=8, max_ips=8,
         except Exception as error:
             result['errors']['whois'] = error_text(error)
     if kind in ('ip', 'reverse-ip', 'all'):
-        kinds = ('A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'CAA', 'SOA') if kind in ('ip', 'all') else ('A', 'AAAA', 'CNAME')
-        result['dns'] = dns_records(hostname, timeout, kinds)
+        from dns_evidence import DNSClient
+        dns_client = dns_client or DNSClient(timeout=timeout, rate=10, max_queries=256)
+        kinds = ('A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'CAA', 'SOA', 'SRV', 'SVCB', 'HTTPS') if kind in ('ip', 'all') else ('A', 'AAAA', 'CNAME')
+        result['dns'] = dns_records(hostname, timeout, kinds, dns_client)
         all_ips = addresses(result['dns'])
         result['ip_count'] = len(all_ips)
         result['omitted_ips'] = all_ips[max_ips:]
@@ -258,7 +293,7 @@ def enrich(hostname, root, rows, kind, directory, timeout=8, max_ips=8,
             if not ipaddress.ip_address(ip).is_global:
                 item['skipped'] = 'Non-public IP: no PTR/provider enrichment performed.'
                 continue
-            item['ptr'] = ptr_lookup(ip, timeout)
+            item['ptr'] = ptr_lookup(ip, timeout, dns_client)
             if item['ptr']['errors']:
                 item['errors']['ptr'] = item['ptr']['errors']
             if kind in ('ip', 'all'):
@@ -281,6 +316,7 @@ def enrich(hostname, root, rows, kind, directory, timeout=8, max_ips=8,
                     item['reverse_ip'] = provider
                 except Exception as error:
                     item['errors']['reverse_ip'] = error_text(error)
+        result['resolver_health'] = dns_client.health()
     result['completed_at'] = utcnow()
     result['partial'] = bool(result['errors'] or result.get('omitted_ips') or
                              any(x['errors'] or x.get('skipped') or x.get('reverse_ip', {}).get('state') == 'unsupported'
@@ -308,8 +344,10 @@ def show(result):
         lines.append('Registration belongs to the parent domain; subdomains usually have no separate WHOIS record.')
         panel('WHOIS / REGISTRATION', lines, 34)
     if result.get('dns'):
-        panel('DNS DETAILS', [kind + ': ' + (', '.join(data['values']) or 'no records') + ' | TTL ' + str(data['ttl'] if data['ttl'] is not None else '-')
+        panel('DNS DETAILS', [kind + ': ' + (', '.join(data['values']) or 'no records') + ' | ' + data.get('state', 'legacy') + ' | TTL ' + str(data['ttl'] if data['ttl'] is not None else '-')
                               for kind, data in result['dns']['records'].items()], 36)
+        if result['dns'].get('trust_disagreements'):
+            say('    Resolver disagreement: ' + ', '.join(result['dns']['trust_disagreements']) + '; both observations saved.', '1;93')
     for item in result['ips']:
         say('\n    IP ' + item['address'] + ' / IPv' + str(item['version']), '1;95')
         if item.get('skipped'):
