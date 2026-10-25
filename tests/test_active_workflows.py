@@ -106,6 +106,7 @@ class ActiveWorkflowTests(unittest.TestCase):
             with self.subTest(choice=choice), patch('builtins.input',
                     side_effect=[choice, 'example.com', 'yes', '', '0']), \
                     patch('atlas.execute_scan', return_value=0) as execute, \
+                    patch.dict(atlas.os.environ, {}, clear=False), \
                     contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(atlas.main(['menu']), 0)
                 args = execute.call_args.args[0]
