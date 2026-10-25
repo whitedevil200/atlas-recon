@@ -31,7 +31,7 @@ atlas_run() {
 atlas_authorized() {
   local atlas_answer
   read -r -p 'Authorized for DNS/HTTP checks? Type YES: ' atlas_answer || return 1
-  [[ "$atlas_answer" == 'YES' ]]
+  [[ "${atlas_answer^^}" == 'YES' ]]
 }
 atlas_menu() {
   local atlas_choice atlas_domain atlas_directory atlas_file atlas_wordlist atlas_pause
@@ -107,7 +107,7 @@ atlas_menu() {
           if [[ "$atlas_choice" == 9 ]]; then
             atlas_args+=(--check-live)
           else
-            atlas_args+=(--mode active)
+            atlas_args+=(--mode active --profile quick --tool-timeout 30 --timeout 3)
             read -r -p 'Wordlist path [bundled starter]: ' atlas_wordlist || return 0
             if [[ -n "$atlas_wordlist" ]]; then atlas_args+=(--wordlist "$atlas_wordlist"); fi
             if [[ "$atlas_choice" == 3 ]]; then atlas_args+=(--permute --http --free-engines); fi

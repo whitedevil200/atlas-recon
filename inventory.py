@@ -47,7 +47,7 @@ _OBSERVATION_METADATA = {
     'last_seen', 'updated_at', 'created_at', 'duration', 'elapsed',
     'duration_seconds', 'elapsed_seconds', 'latency', 'latency_seconds',
     'response_time', 'response_time_seconds', 'cached', 'cache', 'cache_hit',
-    'ttl', 'remaining_ttl', 'resolver', 'resolver_metrics',
+    'ttl', 'remaining_ttl', 'resolver', 'resolver_metrics', 'resolver_attempts', 'preferred_resolver',
     'metrics', 'queries', 'retries', 'attempts', 'samples',
 }
 _UNORDERED_VALUES = {

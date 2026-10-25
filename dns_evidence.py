@@ -61,6 +61,7 @@ class DNSClient:
         self._queries = self._hits = self._misses = self._cursor = 0
         self._next = 0.0
         self._metrics = {}
+        self._preferred_resolver = None
         self.failure_threshold = 3
         self.cooldown_seconds = 30.0
 
@@ -209,10 +210,25 @@ class DNSClient:
         with self._lock:
             available = [r for r in self.resolvers
                          if self._metrics.get(r, {}).get('quarantined_until', 0) <= time.monotonic()]
-            resolver = available[self._cursor % len(available)] if available else None
-            self._cursor += 1
-        result = self._query(name, kind, resolver) if resolver else self._unavailable(
-            name, kind, None, 'All configured resolvers are temporarily quarantined; retry after cooldown')
+            if self._preferred_resolver in available:
+                available.remove(self._preferred_resolver)
+                available.insert(0, self._preferred_resolver)
+        result = self._unavailable(name, kind, None,
+            'All configured resolvers are temporarily quarantined; retry after cooldown')
+        attempts = []
+        # Retry transport/server failures, never a definitive negative response.
+        # Only configured resolvers are used; no public resolver is silently added.
+        for resolver in available[:3]:
+            result = self._query(name, kind, resolver)
+            attempts.append({'resolver': resolver, 'state': result['state'],
+                             'errors': list(result.get('errors', []))})
+            if result['state'] in {'ANSWER', 'NODATA', 'NXDOMAIN'}:
+                with self._lock:
+                    self._preferred_resolver = resolver
+                break
+            if self.health()['queries'] >= self.max_queries:
+                break
+        result['resolver_attempts'] = attempts
         if self.trusted_resolvers:
             trusted = self._query(name, kind, self.trusted_resolvers[0])
             definite = {'ANSWER', 'NODATA', 'NXDOMAIN'}
@@ -231,6 +247,7 @@ class DNSClient:
             return {'queries': self._queries, 'max_queries': self.max_queries,
                     'configured_rate': self.rate, 'effective_rate': self._effective_rate(),
                     'cooldown_seconds': self.cooldown_seconds,
+                    'preferred_resolver': self._preferred_resolver,
                     'cache': {'hits': self._hits, 'misses': self._misses, 'entries': len(self._cache)},
                     'resolvers': deepcopy(self._metrics)}
 

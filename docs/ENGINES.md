@@ -140,8 +140,8 @@ No account-credit consent option can re-enable them.
 `--free-engines` enables DNSx evidence after built-in active validation, adding
 HTTPx/TLSx with `--http`; AlterX already runs with `--permute`. Menu 3 selects
 these options. Each stage retains `engines/NAME/result.json` and normalized
-observations in asset evidence; successful stages are checkpointed. Offline
-scans skip this pipeline. Katana crawling is an explicit selected-host action.
+observations in asset evidence; successful stages are checkpointed. `--offline` skips passive collection, while explicitly selected
+active DNS and engine actions still run. Katana crawling is an explicit selected-host action.
 External tools have individual rate/time/output caps; their internal DNS packets
 are not included in the built-in DNS query counter.
 
@@ -208,3 +208,21 @@ This is explicit authorization to send change notifications through the configur
 - [Integration contract tests](../tests/test_integrations.py)
 
 Use `atlas health RUN` to see the run's coverage and `atlas evidence RUN --serial 1` to inspect why an asset was discovered. Public certificate/archive evidence, generated candidates, current DNS responses and HTTP availability answer different questions and remain distinct.
+
+## Active-workflow diagnostics (2.1.2)
+
+Menu 2/3 use quick passive collection with 30-second external-stage and 3-second
+DNS timeouts. A configured resolver timeout retries up to two configured
+alternatives; the first successful server is preferred for later queries. A
+negative DNS answer is definitive for that query and is never retried against a
+different server. Resolver attempts remain in evidence; no public fallback is
+silently introduced. An entirely unresponsive resolver set reports a DNS failure,
+not an empty successful enumeration.
+
+HTTPx observations use scoped `input`/URL identity when `host` contains an IP.
+HTTP status codes 100–599 set availability UP. A successfully completed HTTPx
+stage with no response for an eligible input records NO_RESPONSE; a partial or
+failed stage does not fabricate negative availability for unobserved inputs.
+TLSx v1.4.0 rejects combining `-san`/`-cn` output-only flags with other probes;
+the adapter uses full JSON plus organization/version/cipher/fingerprint probes.
+The default JSON still retains certificate SAN/CN fields.

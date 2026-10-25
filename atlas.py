@@ -24,7 +24,7 @@ import run_state
 import engine_bundle
 engine_bundle.activate()
 
-VERSION = '2.1.1'
+VERSION = '2.1.2'
 BASE = Path(__file__).resolve().parent
 from importlib.resources import files as resource_files
 DEFAULT_WORDLIST = resource_files('atlas_data').joinpath('starter.txt')
@@ -131,7 +131,6 @@ def show_report(directory, page=1, page_size=15, find='', status='', details=Fal
     for stage in summary['stages']:
         say(f"    {stage['state'].upper():7} {stage['stage']}", 92 if stage['state'] == 'ok' else 93)
         if details:
-            say('      Asset ID: ' + row.get('asset_id', 'legacy inventory; reimport to index'), '1;95')
             say('            ' + stage['detail'], 90)
     selected = ordered_subdomains(summary, rows, find, status, availability)
     visible = selected
@@ -155,6 +154,7 @@ def show_report(directory, page=1, page_size=15, find='', status='', details=Fal
         else:
             print('    ' + paint(str(serial).ljust(serial_width), '1;95') + paint(name.ljust(width), '1;96') + paint(label, color), flush=True)
         if details:
+            say('      Asset ID: ' + row.get('asset_id', 'legacy inventory; reimport to index'), '1;95')
             say('      Sources: ' + ', '.join(row['sources']), 94)
             if row['records']:
                 say('      DNS: ' + json.dumps(row['records']), 90)
@@ -597,6 +597,7 @@ class Run:
                 continue
             self.budget()
             initial, started = len(self.names), time.monotonic()
+            say(f'Collecting {source} ... ({len(self.names):,} names so far)', '1;96')
             if source == 'certspotter':
                 after = self.cursor
                 try:
@@ -736,6 +737,12 @@ class Run:
                                          max_queries=max(1, self.args.max_queries - self.query_count))
         words = [x.strip() for x in Path(self.args.wordlist or DEFAULT_WORDLIST).read_text().splitlines()
                  if x.strip() and not x.startswith('#')]
+        panel('ACTIVE DNS STARTED', [f'Root: {self.root} | wordlist entries: {len(words):,}',
+              f'Passive/imported seeds: {len(self.names):,} | candidate limit: {self.args.max_candidates:,}',
+              'DNS resolvers: ' + ', '.join(str(x) for x in getattr(self.resolver, 'nameservers', [])),
+              'Timeouts retry another configured resolver; definitive negative answers are retained.'], '1;96')
+        if self.dns_client:
+            self.query(self.root, 'A')
         seeds, generated = sorted(self.names), set(self.progress.get('generated', []))
         if self.args.profile == 'deep':
             learned = set()
@@ -773,7 +780,10 @@ class Run:
                 expanded.add(parent)
             if self.args.permute and round_number == 0:
                 seedfile = self.out / 'seeds.txt'
-                seedfile.write_text('\n'.join(seeds) + '\n', encoding='utf-8')
+                # Wordlist candidates are valid mutation inputs even when passive
+                # collection is unavailable or intentionally skipped.
+                mutation_seeds = sorted(set(seeds) | generated)
+                seedfile.write_text('\n'.join(mutation_seeds) + '\n', encoding='utf-8')
                 text = self.tool('alterx', ['alterx', '-l', str(seedfile), '-silent', '-en',
                                            '-limit', str(self.args.max_candidates - len(generated)), '-duc'])
                 for name in extract(text or ''):
@@ -827,7 +837,12 @@ class Run:
                 if self.dns_client:
                     uncertain |= any(v.get('verification', {}).get('state') in ('DISAGREES', 'INDETERMINATE')
                                      for v in self._dns_observations.get(name, {}).values())
-                state = 'wildcard-suspect' if hit else ('indeterminate' if uncertain else ('resolved' if resolved else 'unresolved'))
+                addressed = any(isinstance(answer[k], list) and answer[k] for k in ('A', 'AAAA'))
+                disagreement = any(v.get('verification', {}).get('state') == 'DISAGREES'
+                                   for v in self._dns_observations.get(name, {}).values())
+                state = ('wildcard-suspect' if hit else
+                         'resolved' if addressed and not disagreement else
+                         'indeterminate' if uncertain or resolved else 'unresolved')
                 if resolved or name in self.names:
                     self.add(name, 'dns:' + ('candidate' if name in generated else 'validation'), parent=parent)
                     self.dns[name] = {'status': state, 'records': answer, 'wildcard_test_uncertain': uncertain,
@@ -836,6 +851,7 @@ class Run:
                     if state == 'resolved':
                         next_frontier.add(name)
                         generation_stats['validated'] += 1
+                        say(f'DNS OK  {name}', '1;92')
                 done.add(name)
                 if index % 25 == 0:
                     say(f'DNS round {round_number + 1}: {len(done):,} tested / {len(generated):,} generated')
@@ -848,15 +864,37 @@ class Run:
                 break
         if self.dns_client:
             self.metrics['resolvers'] = self.dns_client.health()
+            responses = sum(row['responses'] for row in self.metrics['resolvers']['resolvers'].values())
+            if not responses:
+                self.record('dns', 'failed', 'No DNS server replied. Check VPN/router DNS or supply --resolvers FILE; this is not proof that subdomains are absent.')
+                return
         self.progress['active'] = 'done'
         self.record('dns', 'ok', f'{len(done)} candidates tested; suspects and disagreements retained')
         if self.args.http and not getattr(self.args, 'free_engines', False):
             import integrations
             selected = [n for n in self.dns if self.dns[n]['status'] == 'resolved']
             result = integrations.run_engine('httpx', selected, self.root, self.out / 'engines',
-                                             self.args.tool_timeout, self.args.rate, {'limit': self.args.max_candidates})
+                                             min(600, self.args.tool_timeout), min(100, self.args.rate),
+                                             {'limit': min(10000, self.args.max_candidates)})
             run_state.atomic_json(self.out / 'httpx-result.json', result)
-            self.record('httpx', result['state'], result.get('detail', 'HTTP observations saved'))
+            self.ingest_engine_result('httpx', result, selected)
+            self.record('httpx', 'ok' if result['state'] == 'complete' else result['state'],
+                        result.get('detail', 'HTTP observations saved'))
+
+    def ingest_engine_result(self, name, result, targets):
+        for observation in result.get('observations', []):
+            host = observation.get('hostname') or observation.get('host')
+            if host not in self.names:
+                continue
+            asset = self.dns.setdefault(host, {'status': 'passive-unverified', 'records': {}})
+            asset.setdefault('enrichment', {}).setdefault(name, []).append(observation)
+            evidence = observation.get('evidence', {})
+            code = evidence.get('status_code')
+            if name == 'httpx' and isinstance(code, int) and 100 <= code <= 599:
+                asset.update(availability='UP', http=evidence)
+        if name == 'httpx' and result['state'] == 'complete':
+            for host in targets:
+                self.dns[host].setdefault('availability', 'NO_RESPONSE')
 
     def free_engine_enrichment(self):
         import integrations
@@ -881,10 +919,7 @@ class Run:
             destination = self.out / 'engines' / name
             destination.mkdir(parents=True, exist_ok=True)
             run_state.atomic_json(destination / 'result.json', result)
-            for observation in result.get('observations', []):
-                host = observation['hostname'] if 'hostname' in observation else observation.get('host')
-                if host in self.names:
-                    self.dns.setdefault(host, {'status': 'passive-unverified', 'records': {}}).setdefault('enrichment', {}).setdefault(name, []).append(observation)
+            self.ingest_engine_result(name, result, targets)
             state = 'ok' if result['state'] in ('complete', 'ok') else result['state']
             self.record(stage, state, result.get('reason', 'Free bundled engine; upstream DNS queries are outside the built-in query counter'))
             say(name + ': ' + result['state'] + ' | ' + str(len(result.get('observations', []))) + ' observations', 36)
@@ -1154,7 +1189,7 @@ def main(argv=None):
                         say(f'Cannot read report: {error}', 91)
                 elif choice == '7':
                     directory = input('Saved run directory: ').strip()
-                    if input('Authorized to contact every in-scope host? Type YES: ').strip() == 'YES':
+                    if input('Authorized to contact every in-scope host? Type YES: ').strip().upper() == 'YES':
                         main(['check', directory, '--authorized'])
                 elif choice == '8':
                     main(['export', input('Saved run directory: ').strip(), '-o', input('Save domains to file: ').strip()])
@@ -1167,14 +1202,15 @@ def main(argv=None):
                 elif choice in ('1', '2', '3', '9'):
                     options = ['scan', '--lookup', '-d', input('Root domain: ').strip()]
                     if choice == '9':
-                        if input('Authorized for DNS/HTTP checks? Type YES: ').strip() != 'YES':
+                        if input('Authorized for DNS/HTTP checks? Type YES: ').strip().upper() != 'YES':
                             continue
                         options += ['--check-live', '--authorized']
                     if choice in ('2', '3'):
-                        if input('Authorized for DNS/HTTP reconnaissance? Type YES: ').strip() != 'YES':
+                        if input('Authorized for DNS/HTTP reconnaissance? Type YES: ').strip().upper() != 'YES':
                             continue
-                        options += ['--mode', 'active', '--authorized']
-                        wordlist = input('Wordlist path [bundled starter]: ').strip()
+                        options += ['--mode', 'active', '--authorized', '--profile', 'quick',
+                                    '--tool-timeout', '30', '--timeout', '3']
+                        wordlist = input('Wordlist path [bundled starter]: ').strip().strip(chr(34))
                         if wordlist:
                             options += ['--wordlist', wordlist]
                     if choice == '3':
@@ -1228,7 +1264,7 @@ def execute_scan(args):
             run.passive()
         if args.mode == 'active' and run.progress.get('active') != 'done':
             run.active()
-        if getattr(args, 'free_engines', False) and not args.offline:
+        if getattr(args, 'free_engines', False) and args.mode == 'active':
             run.free_engine_enrichment()
         run._state = 'complete'
         run.save()

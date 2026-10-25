@@ -170,7 +170,7 @@ class DNSEvidenceTests(unittest.TestCase):
         self.assertEqual(client.health()['effective_rate'], client.rate / 4)
 
     @patch('dns_evidence.dns.query.udp')
-    def test_healthy_alternative_selected_while_failed_resolver_cools_down(self, udp):
+    def test_healthy_alternative_is_retried_immediately_and_preferred(self, udp):
         def reply(request, resolver, **kwargs):
             if resolver == '192.0.2.53':
                 raise dns.exception.Timeout()
@@ -181,7 +181,8 @@ class DNSEvidenceTests(unittest.TestCase):
             client.query('api.example.com', 'A')
         self.assertEqual(client.query('api.example.com', 'A')['resolver'], '192.0.2.54')
         failed_calls = [call for call in udp.call_args_list if call.args[1] == '192.0.2.53']
-        self.assertEqual(len(failed_calls), 3)
+        self.assertEqual(len(failed_calls), 1)
+        self.assertEqual(client.health()['preferred_resolver'], '192.0.2.54')
 
     @patch('dns_evidence.dns.query.udp')
     def test_success_after_cooldown_restores_configured_rate(self, udp):
@@ -193,6 +194,27 @@ class DNSEvidenceTests(unittest.TestCase):
             client._metrics['192.0.2.53']['quarantined_until'] = 0
         self.assertEqual(client.query('api.example.com', 'A')['state'], 'ANSWER')
         self.assertEqual(client.health()['effective_rate'], client.rate)
+
+    @patch('dns_evidence.dns.query.udp')
+    def test_failover_retains_attempts_and_definitive_negatives_do_not_retry(self, udp):
+        udp.side_effect = [dns.exception.Timeout(), response()]
+        client = evidence.DNSClient(resolvers=['192.0.2.53', '192.0.2.54'], rate=1000000)
+        row = client.query('api.example.com', 'A')
+        self.assertEqual(row['state'], 'ANSWER')
+        self.assertEqual([r['state'] for r in row['resolver_attempts']], ['TIMEOUT', 'ANSWER'])
+        udp.reset_mock()
+        udp.side_effect = None
+        udp.return_value = response(value=None, code='NXDOMAIN')
+        self.assertEqual(client.query('missing.example.com', 'A')['state'], 'NXDOMAIN')
+        self.assertEqual(udp.call_count, 1)
+
+    @patch('dns_evidence.dns.query.udp', side_effect=dns.exception.Timeout)
+    def test_failover_obeys_shared_packet_budget(self, udp):
+        client = evidence.DNSClient(resolvers=['192.0.2.53', '192.0.2.54', '192.0.2.55'],
+                                    rate=1000000, max_queries=2)
+        self.assertEqual(client.query('api.example.com', 'A')['state'], 'TIMEOUT')
+        self.assertEqual(udp.call_count, 2)
+        self.assertEqual(client.health()['queries'], 2)
 
 
 if __name__ == '__main__':

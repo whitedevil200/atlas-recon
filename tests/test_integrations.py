@@ -207,8 +207,10 @@ class IntegrationTests(unittest.TestCase):
         for flag in ('-sc', '-title', '-td', '-ip', '-cname', '-tls-grab', '-cdn', '-asn'):
             self.assertIn(flag, http)
         tls = api.build_command('tlsx', 'tlsx', 'input', 'example.com', 2, 50, {})
-        for flag in ('-san', '-cn', '-so', '-hash'):
+        for flag in ('-so', '-tv', '-cipher', '-hash'):
             self.assertIn(flag, tls)
+        self.assertNotIn('-san', tls)
+        self.assertNotIn('-cn', tls)
         self.assertNotIn('-not-before', tls)
         self.assertNotIn('-not-after', tls)
 

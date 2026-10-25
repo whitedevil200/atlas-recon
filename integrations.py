@@ -119,7 +119,7 @@ def build_command(name, executable, input_path, root, rate, limit, options):
                   '-sc', '-title', '-td', '-ip', '-cname', '-tls-grab', '-cdn', '-asn', '-server', '-ct', '-cl', '-location'],
         # JSON always includes certificate validity dates; not-before/after are not CLI flags.
         'tlsx': ['-l', str(input_path), '-silent', '-json', '-c', '1', '-delay', str(1 / rate) + 's',
-                 '-retry', '0', '-duc', '-san', '-cn', '-so', '-tv', '-cipher', '-hash', 'sha256'],
+                 '-retry', '0', '-duc', '-so', '-tv', '-cipher', '-hash', 'sha256'],
         'chaos': ['-d', root, '-silent'],
         'katana': ['-list', str(input_path), '-silent', '-jsonl', '-d', '1', '-rl', str(rate),
                    '-c', '1', '-p', '1', '-fs', 'fqdn', '-duc'],
@@ -274,8 +274,13 @@ def _observations(lines, name, root, limit):
         if not isinstance(row, dict):
             continue
         request = row.get('request') if isinstance(row.get('request'), dict) else {}
-        candidate = row.get('host') or row.get('input') or row.get('url') or row.get('name') or row.get('data') or request.get('endpoint')
-        host = normalize_host(candidate, root)
+        # HTTPx reports an IP in `host` and the requested DNS name in `input`.
+        # Try each known identity field instead of discarding valid input names
+        # whenever an earlier field contains an IP or an unrelated TLS name.
+        host = next((normalized for candidate in
+                     (row.get('input'), row.get('host'), row.get('url'), row.get('name'),
+                      row.get('data'), request.get('endpoint'))
+                     if (normalized := normalize_host(candidate, root))), None)
         if not host:
             continue
         if host not in names and len(names) >= limit:

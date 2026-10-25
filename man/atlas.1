@@ -1,4 +1,4 @@
-.TH ATLAS 1 "October 2026" "ATLAS 2.1.1" "User Commands"
+.TH ATLAS 1 "October 2026" "ATLAS 2.1.2" "User Commands"
 .SH NAME
 atlas \- scoped Linux subdomain discovery and DNS evidence mapping
 .SH SYNOPSIS
@@ -371,6 +371,14 @@ skips engine installation. Other adapters remain optional/manual.
 .TP
 .B scan --free-engines
 Active mode only. Add DNSx evidence; with --http also add HTTPx/TLSx.
-Offline scans skip these stages. Menu 3 enables this pipeline and AlterX.
+The --offline flag skips passive sources; explicit active stages still run. Menu 3 enables this pipeline and AlterX.
 External-engine packets are outside the built-in DNS query counter.
 Censys, SecurityTrails and Chaos are disabled, even when credentials are present.
+
+.SH ACTIVE MENU FIXES (2.1.2)
+Menu 2 and 3 use quick passive collection with a 30-second tool timeout and a
+3-second DNS timeout. DNS transport/server failures retry up to three configured
+resolvers and prefer the working resolver. Negative answers are not retried.
+Wordlist candidates seed mutations when passive sources yield no names.
+HTTPx input identities survive IP-valued host fields; actual HTTP responses
+populate UP availability. TLSx uses a compatible combination of JSON probes.
