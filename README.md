@@ -507,6 +507,23 @@ repair it and `atlas engines --check` to inspect versions. Other free engines,
 including PureDNS/MassDNS and BBOT, remain optional manual adapters with their
 own runtime/configuration requirements. See [the adapter matrix](docs/ENGINES.md).
 
+## Complete command and menu manual
+
+Every command, positional argument, option/default and menu choice is explained
+in [the complete manual](docs/MANUAL.md). It includes all menu entries 0–22,
+lookup/browser controls, examples, output files, environment variables, status
+meanings, recovery and troubleshooting.
+
+On Linux use `man atlas` after installation, or `man -l man/atlas.1` from this
+checkout. On Windows open `docs/MANUAL.md`; command-specific quick help remains
+available with `.\atlas.cmd COMMAND --help`.
+
+The editable detailed reference is `scripts/build-man.py`. Run
+`python scripts/build-man.py` after changes, then
+`python scripts/build-man.py --check` to verify every parser argument is covered
+and the source/packaged man pages and readable manual match. CI checks coverage
+and renders the Linux man page with groff.
+
 ## Help, tests and troubleshooting
 
 ```bash

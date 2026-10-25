@@ -1,0 +1,1194 @@
+# ATLAS 2.1.2 complete command and menu manual
+
+Generated from the current CLI and detailed command descriptions. Do not edit generated copies directly.
+
+## Name
+
+atlas - colorful CLI subdomain discovery, DNS/HTTP evidence, lookups and persistent reconnaissance.
+
+## Synopsis
+
+atlas [--color auto|always|never] COMMAND [ARGUMENTS]
+
+atlas (no arguments opens the menu). atlas --version. atlas COMMAND --help.
+
+atlas setup-engines [--list] [--only ENGINE,ENGINE]
+
+## Getting started
+
+Linux source installation: bash install.sh. Add ~/.local/bin to PATH, then run atlas. The installer creates a private Python environment, installs the man page and normally installs the seven free engines. Moving a source checkout requires rerunning installation.
+
+Read the installed Linux manual with man atlas, or read a checkout directly with man -l man/atlas.1. If the user man path is missing, use MANPATH="$HOME/.local/share/man:" man atlas. The trailing colon preserves the system default man paths.
+
+Windows PowerShell from the repository: .\install-windows.cmd, then .\atlas.cmd. From the surrounding task workspace use .\outputs\atlas-recon\atlas.cmd. Windows does not normally provide man; docs/MANUAL.md is the same complete manual in readable Markdown.
+
+In examples, RUN is an actual saved timestamped directory, not the literal word RUN. OLD_RUN and NEW_RUN are two such directories. Quote paths containing spaces. Keep summary.json and assets.jsonl together. Newly generated names can be absent, stale or shared; no exhaustive-subdomain or vulnerability guarantee is made.
+
+Use --no-lookup for scripts. Start with an offline passive import to learn list/search/export without target traffic; explicitly active options still use the network even with --offline.
+
+## Global options
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### --version
+
+Print the installed ATLAS version and exit. This is a top-level flag: use atlas --version, not atlas scan --version.
+
+### --color COLOR
+
+Choose auto (terminal detection), always (force ANSI escapes), or never (plain output). Place this before the command. NO_COLOR disables automatic color, but explicitly forced always output can override it. Menu launchers normally enable colors without a flag. For setup-engines use ATLAS_COLOR rather than this global flag because its options are handled separately. Choices: auto, always, never.
+
+## Command: menu
+
+Open the persistent colorful operations menu. No arguments also opens this menu. Linux source installs use a Bash launcher; Windows and the packaged console entry use the Python menu. Optional figlet produces the banner; readable ANSI/plain fallbacks work without it.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+**Examples**
+
+```text
+atlas
+atlas menu
+```
+
+## Command: doctor
+
+Print core Python dependencies and common executable locations, including optional legacy WHOIS. This is a lightweight diagnostic, not installation or full adapter validation. Use engines --check for the broader adapter registry.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+**Examples**
+
+```text
+atlas doctor
+atlas engines --check
+```
+
+## Command: report
+
+Read a saved run and immediately print its full numbered inventory. This is read-only and makes no network requests. Stage outcomes and DNS/availability labels are shown; optional filters affect the displayed serials. Legacy page flags remain accepted but do not paginate.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### DIRECTORY
+
+Saved ATLAS run directory containing summary.json and assets.jsonl, or a checkpoint.json for discovery recovery. Use the exact directory printed by an earlier operation, not just its parent results directory. Required.
+
+### --page PAGE
+
+Legacy compatibility argument accepted but not used for pagination. The current report always shows the full filtered list. Use terminal scrollback or --find instead of expecting page boundaries. Default: 1.
+
+### --page-size PAGE_SIZE
+
+Legacy compatibility argument accepted but not used to truncate the list. It does not limit discovery, export size or serial selection. Default: 15.
+
+### --find FIND
+
+Case-insensitive substring filter on hostnames. An empty string selects all hostnames. Serial numbers are assigned after filtering, so use the same filter when displaying a list and selecting a row. Default: empty string (no filter/cursor).
+
+### --status STATUS
+
+Filter by the machine DNS state, not the displayed HTTP label. Leave empty for all states. For web status use --availability. This is a view filter; saved records are not changed. Choices: passive-unverified, resolved, wildcard-suspect, unresolved, indeterminate. Default: empty string (no filter/cursor).
+
+### --details
+
+Print source lists, stable asset IDs, DNS records, saved HTTP evidence, timestamps and stage explanations beneath the full numbered inventory. It reads existing evidence and does not refresh remote data. Default: off.
+
+### --all
+
+Legacy compatibility flag. Full-list display is already the default, so this does not reveal additional hidden pages. Default: off.
+
+### --availability AVAILABILITY
+
+Filter saved availability states; for example --availability UP shows hosts that had an HTTP response in that observation. PENDING is displayed as CHECKING. Hosts without an availability field will not match this filter. Filtering changes the displayed serial order. Choices: UP, NO_RESPONSE, NO_DNS, DNS_ONLY, CHECK_ERROR, PENDING. Default: empty string (no filter/cursor).
+
+**Examples**
+
+```text
+atlas report RUN
+atlas report RUN --find api --details
+atlas report RUN --availability UP
+```
+
+## Command: browse
+
+Interactive full-list viewer for a saved run. Keys: r refresh from disk, s change hostname search, l enter SR-NO lookup, w save a hostname export, q return. Refresh rereads files; it does not perform a new scan. A lookup explicitly selected from the viewer can use network services.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### DIRECTORY
+
+Saved ATLAS run directory containing summary.json and assets.jsonl, or a checkpoint.json for discovery recovery. Use the exact directory printed by an earlier operation, not just its parent results directory. Required.
+
+**Examples**
+
+```text
+atlas browse RUN
+```
+
+## Command: lookup
+
+Enrich one selected subdomain or interactively choose one by SR NO. Domain registration generally belongs to the registrable parent. IP country is registration data, not device geolocation; reverse-IP and certificate overlap are relationships, not proof of ownership. Out-of-scope neighbours are labeled and never automatically probed or added.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### DIRECTORY
+
+Saved ATLAS run directory containing summary.json and assets.jsonl, or a checkpoint.json for discovery recovery. Use the exact directory printed by an earlier operation, not just its parent results directory. Required.
+
+### --serial SERIAL
+
+Select one positive SR NO from the same run and --find view used in report. This is a single integer, not a range. Omit it to open interactive selection. Non-default lookup flags require an explicit --serial; private-view selection therefore needs --serial and --allow-private.
+
+### --find FIND
+
+Case-insensitive substring filter on hostnames. An empty string selects all hostnames. Serial numbers are assigned after filtering, so use the same filter when displaying a list and selecting a row. Default: empty string (no filter/cursor).
+
+### --kind KIND
+
+whois obtains registration data for the registrable parent using RDAP, or optional legacy WHOIS. ip obtains DNS A/AAAA/CNAME/MX/NS/TXT/CAA/SOA/SRV/SVCB/HTTPS records, PTR, IP RDAP and ASN/routing evidence. reverse-ip combines PTR, saved shared-address matches and the limited free reverse-IP index. all combines these actions. Shared addresses do not prove common ownership. Choices: whois, ip, reverse-ip, all. Default: all.
+
+### --timeout SECONDS
+
+Per DNS/provider/WHOIS request timeout, an integer from 1 to 30 seconds. One lookup may issue several operations, so this is not a total command deadline. Provider failures are retained as partial evidence. Allowed range: 1..30. Default: 8.
+
+### --max-ips COUNT
+
+Maximum number of addresses receiving deeper IP/PTR/registration/routing enrichment, 1 through 32. Remaining discovered addresses are listed as omitted from enrichment rather than silently forgotten. Allowed range: 1..32. Default: 8.
+
+### --refresh
+
+Bypass successful provider-response caches for this lookup. Ordinary responses cache for one hour and IANA bootstrap data for 24 hours. DNS requests are fresh independently of this flag. Refresh does not remove upstream quotas or guarantee that a provider returns new data. Default: off.
+
+### --no-external
+
+Disable only the HackerTarget reverse-IP index. DNS/PTR, registration RDAP, routing services and correlation with saved assets can still run. This is not an offline or no-network switch. Default: off.
+
+### --legacy-whois
+
+Invoke an installed system whois command in place of domain RDAP. Relevant to whois/all lookup kinds. It does not create a separate registration record for a subdomain; normally the registered parent owns the registration. Default: off.
+
+### -o, --output OUTPUT
+
+Write lookup evidence to a new JSON file instead of the default DIRECTORY/lookups/ timestamped file. Parent directory must exist. Existing files are never replaced; there is no lookup --force option. Successful provider caches remain under DIRECTORY/lookups/cache/.
+
+### --allow-private
+
+Explicitly allow this operation on an inventory marked private. Lookup/check/engine commands otherwise reject private-view inventories. For crawl, this also permits non-global destination addresses; it does not expand the saved hostname scope or remove exclusions. Default: off.
+
+**Examples**
+
+```text
+atlas lookup RUN
+atlas lookup RUN --serial 2 --kind all
+atlas lookup RUN --find api --serial 1 --kind ip --timeout 5
+atlas lookup RUN --serial 1 --kind reverse-ip --no-external -o lookup.json
+```
+
+## Command: check
+
+Create a separate checked run and perform background DNS plus HTTPS/HTTP availability checks for every discovered subdomain, excluding the apex. Completed rows are saved progressively; the source inventory is preserved. Open the printed checked directory with browse in a second terminal to refresh progress.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### DIRECTORY
+
+Saved ATLAS run directory containing summary.json and assets.jsonl, or a checkpoint.json for discovery recovery. Use the exact directory printed by an earlier operation, not just its parent results directory. Required.
+
+### --authorized
+
+Explicitly acknowledge permission to perform this operation within its configured scope. This does not obtain permission from a domain owner. Required for active scans, availability checks, engine actions, owner imports and crawling, and for recovery of active work where applicable. Default: off.
+
+### --dns-only
+
+Resolve DNS for every discovered subdomain without HTTP probes. An address result is DNS_ONLY, not HTTP UP. Useful when HTTP traffic is unnecessary; DNS queries still contact configured resolvers. Default: off.
+
+### --workers WORKERS
+
+Maximum concurrent checking workers, 1 through 32. Completed rows are saved incrementally and pending rows remain recoverable after interruption. Higher concurrency does not override rate pacing. Allowed range: 1..32. Default: 8.
+
+### --rate RATE
+
+Positive rate of explicit check-operation starts per second across workers. This is not an exact bound on internal DNS retries, resolver failover or HTTP-stack resolution. DNS evidence shares a bounded client/cache. Default: 10.
+
+### --timeout TIMEOUT
+
+Positive timeout in seconds for each DNS/HTTP operation. Each hostname can require several DNS records and HTTPS/HTTP attempts; it is not a total per-host or whole-run limit. Default: 5.
+
+### -o, --output OUTPUT
+
+Parent folder for a new ROOT-checked-TIMESTAMP directory. Default: the input run parent. The original discovery run is preserved; completed checks, up.txt and availability.csv are written to the new checked run.
+
+### --allow-private
+
+Explicitly allow this operation on an inventory marked private. Lookup/check/engine commands otherwise reject private-view inventories. For crawl, this also permits non-global destination addresses; it does not expand the saved hostname scope or remove exclusions. Default: off.
+
+**Examples**
+
+```text
+atlas check RUN --authorized
+atlas check RUN --authorized --dns-only --workers 4 --timeout 3
+```
+
+## Command: export
+
+Save discovered subdomains or their records to a chosen new file. Display colors/headings are never inserted into the plain hostname export. This reads saved evidence rather than discovering or rechecking hosts. It excludes the root apex.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### DIRECTORY
+
+Saved ATLAS run directory containing summary.json and assets.jsonl, or a checkpoint.json for discovery recovery. Use the exact directory printed by an earlier operation, not just its parent results directory. Required.
+
+### -o, --output OUTPUT
+
+Required destination file. Parent directory must already exist. Default exclusive creation prevents overwriting an existing export; combine with --force only when replacement is intended. The apex is excluded. Required.
+
+### --format FORMAT
+
+txt writes one subdomain per line without decorations or serial numbers. csv writes compact serial/hostname/availability/DNS/time/HTTP-code columns. jsonl writes complete per-asset records including nested evidence; use it for machine processing and later compatible imports. Choices: txt, csv, jsonl. Default: txt.
+
+### --availability AVAILABILITY
+
+Restrict export to this saved availability state. Without a filter export every discovered subdomain, including unverified names. UP reflects a past HTTP response rather than a permanent uptime guarantee. Choices: UP, NO_RESPONSE, NO_DNS, DNS_ONLY, CHECK_ERROR, PENDING. Default: empty string (no filter/cursor).
+
+### --force
+
+Allow replacing the destination file. Applies only to this export command; it does not authorize replacing lookup/diff files or deleting saved runs. Default: off.
+
+**Examples**
+
+```text
+atlas export RUN -o domains.txt
+atlas export RUN -o responsive.jsonl --format jsonl --availability UP
+```
+
+## Command: scan
+
+Discover one scoped root from passive sources/imports, optionally generate and validate active DNS candidates, then save a timestamped inventory. Every active action must be authorized. Outputs preserve provenance and uncertainty; finding every public/private subdomain cannot be guaranteed.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### -d, --domain DOMAIN
+
+DNS root to enumerate or import, for example example.com. Supply a hostname, not a URL, port, path or IP address. International names are normalized to IDNA. Root and descendant boundaries are enforced; evilexample.com is not part of example.com. Required.
+
+### --mode MODE
+
+Passive collects public-source/import evidence without target DNS brute force. Active additionally generates and resolves candidates; it requires --authorized. --http, --permute, --wordlist, non-default --engine, --recursive-depth and --free-engines require active mode. Passive names are not automatically live hosts. Choices: passive, active. Default: passive.
+
+### --authorized
+
+Explicitly acknowledge permission to perform this operation within its configured scope. This does not obtain permission from a domain owner. Required for active scans, availability checks, engine actions, owner imports and crawling, and for recovery of active work where applicable. Default: off.
+
+### --free-engines
+
+After built-in active discovery, run managed DNSx evidence collection; add HTTPx and TLSx when --http is also selected. This does not enable AlterX by itself; use --permute. Successful stages checkpoint their results. External packets are outside the built-in --max-queries counter. Explicit active engine stages still run with --offline. Default: off.
+
+### --sources SOURCES
+
+Comma-separated passive providers. Supported: crtsh, certspotter, hackertarget, wayback, commoncrawl, subfinder, assetfinder, findomain. Common Crawl and Assetfinder are available but are not in the normal default list. Subfinder uses a keyless-source allowlist; Findomain excludes account/paid sources. Missing optional binaries and provider failures reduce coverage. Censys, SecurityTrails and Chaos cannot be enabled as scan sources. Default: crtsh,certspotter,hackertarget,wayback,subfinder,findomain.
+
+### --ct-pages CT_PAGES
+
+Maximum Cert Spotter pages per collection. A page cap limits coverage; it is not proof that all issuance records were retrieved. Quick profile reduces this to at most 2. Deep profile raises it to at least 10. Public endpoint throttling and response-size limits still apply. Default: 5.
+
+### --ct-after CT_AFTER
+
+Cert Spotter issuance ID from which to continue pagination. Empty means start normally. It does not automatically import earlier names; combine with --import or use an incremental watch to retain prior evidence. Default: empty string (no filter/cursor).
+
+### --import FILE
+
+Import an existing evidence file; repeat --import for multiple files. Supported input includes hostname text, URLs, certificate-style wildcard names and compatible JSON/JSONL records. Hostnames are normalized, deduplicated and scope-filtered. Imported names remain unverified until checked. Default: none. Repeatable.
+
+### --offline
+
+Skip passive network-source collection. This is not a universal network-disconnect switch: explicitly selected active DNS, HTTP, engine or availability actions can still make requests. For a network-free import rehearsal, keep passive mode and do not add --check-live. Default: off.
+
+### --exclude EXCLUDE
+
+Exclude this hostname and every descendant, retaining label-boundary checks. Repeat to exclude multiple branches, such as --exclude dev.example.com --exclude internal.example.com. Excluded names must themselves be valid hostnames. Default: none. Repeatable.
+
+### -o, --output OUTPUT
+
+Parent folder for a new ROOT-UTC_TIMESTAMP run directory. It is created when necessary. A shared atlas.sqlite3 is stored in this parent unless --database overrides it. ATLAS prints the actual run path; supply that path to report/check/lookup commands. Default: results.
+
+### -w, --wordlist WORDLIST
+
+Active-only file of relative DNS labels/prefixes, one per line, such as www, api or dev.api. Blank lines and lines starting with # are skipped. Entries are appended to the root or an eligible recursive parent; do not supply full URLs as wordlist entries. The default is the packaged starter.txt, not an exhaustive dictionary. Generation stops at the candidate budget.
+
+### --rate RATE
+
+Positive built-in DNS packet-start rate per second; concurrent lookups share its limiter. Failed-resolver feedback can lower the effective rate. External integrations receive a bounded rate where their CLI supports one; this is not a universal cap on every provider HTTP call, internal retry or external-tool DNS packet. Default: 10.
+
+### --timeout TIMEOUT
+
+Positive per-provider-request/DNS-attempt timeout in seconds. Failover can try up to three configured resolvers, so one logical lookup may take multiple attempts. The overall elapsed budget remains separate. Interactive active menu options override this to 3 seconds. Default: 10.
+
+### --tool-timeout TOOL_TIMEOUT
+
+Positive wall-time limit for each discovery executable. Complete lines from partial output are retained when a command times out. Explicit integration actions have an additional 600-second maximum. Interactive menu options 2/3 override this to 30 seconds; large scans can set a larger explicit value. Default: 600.
+
+### --archive-limit ARCHIVE_LIMIT
+
+Maximum Wayback CDX records requested. Historical hostnames are candidates, not proof of current ownership or availability. The endpoint, response-size cap and upstream quota can limit actual results further. Default: 10000.
+
+### --max-candidates MAX_CANDIDATES
+
+Maximum generated guesses across wordlist expansion and mutations, excluding already collected passive names. With --permute the wordlist initially receives half this budget, leaving room for AlterX. Quick profile caps it at 1000. Increasing it increases DNS work; no value guarantees complete enumeration. Default: 10000.
+
+### --recursive-depth RECURSIVE_DEPTH
+
+Maximum relative label depth eligible for iterative wordlist expansion, from 0 through 3. Zero expands at the root only. Initial seeds and newly validated names can become parents within the depth and shared candidate ceilings. Deep active profile raises this to at least 2. This is DNS candidate recursion, not web-crawl depth. Allowed range: 0..3. Default: 0.
+
+### --wildcard-tests WILDCARD_TESTS
+
+Positive number of random sibling samples per parent, each queried for A/AAAA/CNAME. The default three samples cost at least nine logical DNS queries per uncached parent, before retries. Shared/rotating answers are a heuristic: suspects are retained, and uncertain wildcard sampling remains in evidence. Default: 3.
+
+### --permute
+
+Run installed AlterX for bounded candidate generation, using passive seeds plus wordlist candidates. Wordlist candidates also seed mutations when no passive names were available. Missing/failed AlterX is reported; generated output still needs DNS validation. Install or repair the free bundle with setup-engines. Default: off.
+
+### --engine ENGINE
+
+Choose the additional DNS backend. builtin uses ATLAS DNS evidence directly. puredns requires MassDNS plus public/trusted resolver files and filters candidate output before independent validation. dnsx and shuffledns save their adapter evidence; built-in validation still classifies candidates. ShuffleDNS also needs MassDNS and both resolver files. Selecting a backend does not install it. Choices: builtin, puredns, dnsx, shuffledns. Default: builtin.
+
+### --resolvers RESOLVERS
+
+Text file of DNS resolver IP addresses, one per line; blank lines and comments are accepted by the built-in scan reader. Use resolvers reachable from the relevant public/private network. Resolver responsiveness does not prove trustworthiness. No resolver list is downloaded automatically.
+
+### --trusted-resolvers TRUSTED_RESOLVERS
+
+File of explicitly trusted resolver IP addresses for independent answer comparison. Required with PureDNS and ShuffleDNS adapters. Built-in DNS evidence compares against the first configured trusted resolver and preserves agreement/disagreement; this is not local DNSSEC validation.
+
+### --http
+
+Collect ProjectDiscovery HTTPx metadata for DNS-resolved, non-suspect inputs. With --free-engines use the shared HTTPx/TLSx enrichment stages. HTTP response codes, including 3xx/4xx/5xx, set availability UP; complete probes without responses yield NO_RESPONSE. An incomplete stage does not manufacture negative availability. This is not Python httpx or a headless screenshot feature. Default: off.
+
+### --check-live
+
+After discovery create a separate checked run and queue every discovered subdomain for background DNS/HTTP checks. Requires --authorized even when collection mode is passive. Uses --workers, --rate and --timeout. Follow-up serial selection uses the checked run. This is separate from selected resolved-host metadata under --http. Default: off.
+
+### --workers WORKERS
+
+Availability-check worker count, 1 through 32. For scan this controls the --check-live phase, not the sequential built-in wordlist loop or every external engine. Request pacing remains separately controlled by --rate. Allowed range: 1..32. Default: 8.
+
+### --lookup
+
+Force the post-scan offer to select the just-displayed result by SR NO for WHOIS/IP/reverse-IP lookup. Without either lookup flag, interactive terminals offer it automatically and non-interactive scans do not. Mutually exclusive with --no-lookup; omit this in unattended jobs.
+
+### --no-lookup
+
+Suppress the follow-up interactive SR-NO lookup offer. Use this for automation and redirected input. Saved results remain available through report, browse, lookup and evidence.
+
+### --max-queries MAX_QUERIES
+
+Positive packet budget for the built-in DNS client, including wildcard checks, failover, trusted comparison and TCP retries. Cache hits do not send another packet. This does not count packets hidden inside DNSx/HTTPx/TLSx or all OS resolver activity. Exhaustion preserves a checkpoint and partial report. Default: 100000.
+
+### --max-seconds MAX_SECONDS
+
+Positive total elapsed discovery budget in seconds, including carried-forward elapsed time when resuming. Checks occur between bounded operations, so one in-flight operation can finish after the threshold. Expiry preserves partial evidence; resume does not reset the original allowance. Default: 3600.
+
+### --max-output-mb MAX_OUTPUT_MB
+
+Positive maximum MiB of output retained per discovery-tool process. Checks occur periodically, so output can briefly exceed the threshold. Structured explicit engine adapters use a separate 8-MiB output budget. This is not a total disk quota for an entire run. Default: 16.
+
+### --database DATABASE
+
+SQLite inventory file used for stable asset IDs, run observations, provenance and checkpoints. Default: atlas.sqlite3 in the output parent. WAL sidecars may exist while open. Choose an existing writable parent; this flag does not change the exported report directory.
+
+### --view VIEW
+
+Separate public and private DNS observation contexts. This marks inventory provenance; it does not automatically connect to a VPN or select a private DNS server. Stable asset identities include the view. Diff requires matching views. Choices: public, private. Default: public.
+
+### --profile PROFILE
+
+balanced keeps explicit defaults. quick uses certspotter,subfinder when the standard source list was left unchanged, caps CT pages at 2 and candidates at 1000. deep raises CT pages to at least 10 and active recursion to at least 2, and learns bounded tokens/numeric neighbours. Profiles do not remove authorization, scope or budget checks. Active menus additionally set shorter timeouts. Choices: quick, balanced, deep. Default: balanced.
+
+**Examples**
+
+```text
+atlas scan -d example.com --profile quick --no-lookup
+atlas scan -d example.com --offline --import names.txt --no-lookup
+atlas scan -d example.com --mode active --authorized -w words.txt --no-lookup
+atlas scan -d example.com --mode active --authorized --profile quick --permute --http --free-engines --tool-timeout 30 --timeout 3
+```
+
+## Command: setup-engines
+
+Install/repair Subfinder, Findomain, DNSx, AlterX, HTTPx, TLSx and Katana from pinned upstream ZIP releases. Archive size and SHA-256 are checked before single-binary extraction, and installed binary hashes/license provenance are recorded. Linux x86_64/arm64 and Windows x86_64 bundles are supported. Setup needs internet access; scans never implicitly download binaries. Other engines remain manual and separately licensed.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### --list
+
+List the pinned engines available for the current supported platform without downloading/installing binaries or running target scans. It prints release versions and licenses. Unsupported OS/architecture combinations return status 2. Default: off.
+
+### --only ONLY
+
+Comma-separated subset to install/repair, such as subfinder,dnsx,httpx. Omit to install all seven managed engines. Names are exact lowercase identifiers without spaces. Unknown names fail before installation. Existing matching archive/binary hashes are checked and reused; a failed download preserves an older binary.
+
+**Examples**
+
+```text
+atlas setup-engines
+atlas setup-engines --list
+atlas setup-engines --only subfinder,dnsx,httpx
+```
+
+## Command: menu-action
+
+Open one advanced interactive menu wizard. This is mainly a Bash-launcher entry point; use the underlying named command when you need all flags or unattended operation. It does not add an extra action beyond the corresponding menu choice.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### CHOICE
+
+One advanced interactive wizard numbered 11 through 21; used by the Bash launcher as well as direct CLI calls. It prompts for saved runs, serials or files rather than accepting every underlying flag. Menu 22 uses setup-engines directly, not menu-action 22. Required. Choices: 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21.
+
+**Examples**
+
+```text
+atlas menu-action 11
+atlas menu-action 20
+```
+
+## Command: resume
+
+Recover an interrupted discovery run from checkpoint.json and its unchanged input manifest, or resume only pending rows in a checked availability run. Original inputs, scope, elapsed budget and completed stages are retained. Changing wordlists/resolvers/budgets requires a new scan. Recovery is not a way to revalidate a completed snapshot.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### DIRECTORY
+
+Saved ATLAS run directory containing summary.json and assets.jsonl, or a checkpoint.json for discovery recovery. Use the exact directory printed by an earlier operation, not just its parent results directory. Required.
+
+### --authorized
+
+Explicitly acknowledge permission to perform this operation within its configured scope. This does not obtain permission from a domain owner. Required for active scans, availability checks, engine actions, owner imports and crawling, and for recovery of active work where applicable. Default: off.
+
+### --no-lookup
+
+Suppress the follow-up interactive SR-NO lookup offer. Use this for automation and redirected input. Saved results remain available through report, browse, lookup and evidence. Default: off.
+
+### --allow-private
+
+Explicitly allow this operation on an inventory marked private. Lookup/check/engine commands otherwise reject private-view inventories. For crawl, this also permits non-global destination addresses; it does not expand the saved hostname scope or remove exclusions. Default: off.
+
+**Examples**
+
+```text
+atlas resume RUN --no-lookup
+atlas resume RUN --authorized --allow-private --no-lookup
+```
+
+## Command: diff
+
+Compare two saved inventories with the same root and DNS view. Report new, semantically changed and not-observed names plus collection-coverage differences. Timestamps, TTL countdowns, cache telemetry, display serials and resolver-attempt identities do not by themselves establish asset changes. Absence under different coverage is not deletion.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### OLD
+
+Earlier saved run to use as the baseline. Both runs must have the same normalized root and public/private view. Older coverage/settings are compared with the new run. Required.
+
+### NEW
+
+Later saved run to compare against the baseline. New, changed and not-observed assets are reported with coverage differences. Not observed does not prove a hostname was deleted. Required.
+
+### -o, --output OUTPUT
+
+Also save the comparison as JSON to a new file. Parent must exist and existing files are protected; there is no diff --force flag. Omitting this prints the comparison only.
+
+**Examples**
+
+```text
+atlas diff OLD_RUN NEW_RUN
+atlas diff OLD_RUN NEW_RUN -o changes.json
+```
+
+## Command: history
+
+Read persistent observations from SQLite, including stable asset identity and view-separated history. This does not scan a hostname, refresh DNS or automatically discover databases in unrelated directories.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### HOSTNAME
+
+Normalized hostname whose persistent observations should be displayed. Only saved SQLite evidence is read; the hostname is not resolved or scanned again. Required.
+
+### --database DATABASE
+
+Existing SQLite inventory from which to read observations. Use the database associated with your output parent if it differs from results/atlas.sqlite3. This does not search every run folder or rebuild a missing database. Default: results/atlas.sqlite3.
+
+### --root ROOT
+
+Optional root-domain constraint to distinguish a hostname observed under different collection roots. Observations retain their DNS view and stable asset identity.
+
+**Examples**
+
+```text
+atlas history api.example.com --database results/atlas.sqlite3 --root example.com
+```
+
+## Command: evidence
+
+Read unified evidence cards: DNS response/error states, HTTP/TLS metadata, discovery provenance, review leads, available SQLite history and saved lookup results. No new network requests are issued. Review leads are hypotheses for investigation, not confirmed vulnerabilities.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### DIRECTORY
+
+Saved ATLAS run directory containing summary.json and assets.jsonl, or a checkpoint.json for discovery recovery. Use the exact directory printed by an earlier operation, not just its parent results directory. Required.
+
+### --serial SERIAL
+
+Required saved-asset selection: a single number, comma-separated numbers, inclusive ranges, or all. Example: 2,5,8-12. At most 100 assets may be selected. Serials refer to the current --find filtered list and exclude the apex. Required.
+
+### --find FIND
+
+Case-insensitive substring filter on hostnames. An empty string selects all hostnames. Serial numbers are assigned after filtering, so use the same filter when displaying a list and selecting a row. Default: empty string (no filter/cursor).
+
+### --database DATABASE
+
+Optional SQLite inventory used to add observation history. Default: atlas.sqlite3 in the saved run parent. Evidence cards still display saved run data when that database does not exist. This option does not perform fresh lookups.
+
+**Examples**
+
+```text
+atlas evidence RUN --serial 2,5,8-12
+atlas evidence RUN --find api --serial 1 --database results/atlas.sqlite3
+```
+
+## Command: health
+
+Read saved provider/resolver/budget telemetry and stage coverage. Where available this includes incremental yield, logical fetches, elapsed time, output size, pagination caps, cache and resolver health. Logical fetch counts are not exact wire-request counts or paid-account usage, and missing telemetry is not zero work.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### DIRECTORY
+
+Saved ATLAS run directory containing summary.json and assets.jsonl, or a checkpoint.json for discovery recovery. Use the exact directory printed by an earlier operation, not just its parent results directory. Required.
+
+**Examples**
+
+```text
+atlas health RUN
+```
+
+## Command: engines
+
+List repository adapters, licenses, modes, installation/configuration requirements and validation limits. Seven tools have an automatic pinned free bundle; the remaining adapters are optional/manual. Registry presence alone does not mean a binary is installed or working against current services.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### --check
+
+Find executables on ATLAS-managed PATH and run bounded version diagnostics. This does not install tools, enumerate a target or prove that all adapter modes work against current upstream services. Use setup-engines to install the managed seven-engine bundle. Default: off.
+
+**Examples**
+
+```text
+atlas engines
+atlas engines --check
+```
+
+## Command: engine
+
+Run one curated adapter on saved scope/selected input. Arbitrary shell flags are not accepted. Results are saved beneath RUN/engines/; useful normalized names can create a new sibling candidate inventory. Existing inventory is preserved. Generation/import output is not automatically DNS-verified. Private inventory additionally requires --allow-private.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### NAME
+
+Registered engine name: subfinder, assetfinder, findomain, dnsx, puredns, massdns, shuffledns, alterx, gotator, httpx, tlsx, bbot, amass, chaos, notify, katana or baddns. chaos-client aliases chaos, which is disabled. Amass is import-only. Generic notify cannot send without the dedicated consent/configuration flow; use watch --notify. An engine is not installed simply because its name is registered. Required.
+
+### DIRECTORY
+
+Saved ATLAS run directory containing summary.json and assets.jsonl, or a checkpoint.json for discovery recovery. Use the exact directory printed by an earlier operation, not just its parent results directory. Required.
+
+### --serial SERIAL
+
+Select saved input hosts by one SR NO, comma-separated numbers, inclusive ranges or all. Selection is bounded by --limit; default all can require an explicit smaller batch for large runs. Subfinder/Assetfinder/Findomain root-wide discovery still queries the saved root even if one serial is selected. Default: all.
+
+### --find FIND
+
+Case-insensitive substring filter on hostnames. An empty string selects all hostnames. Serial numbers are assigned after filtering, so use the same filter when displaying a list and selecting a row. Default: empty string (no filter/cursor).
+
+### --authorized
+
+Explicitly acknowledge permission to perform this operation within its configured scope. This does not obtain permission from a domain owner. Required for active scans, availability checks, engine actions, owner imports and crawling, and for recovery of active work where applicable. Default: off.
+
+### --allow-private
+
+Explicitly allow this operation on an inventory marked private. Lookup/check/engine commands otherwise reject private-view inventories. For crawl, this also permits non-global destination addresses; it does not expand the saved hostname scope or remove exclusions. Default: off.
+
+### --timeout TIMEOUT
+
+Wall-time limit in whole seconds for this external process, from 1 through 600. Version preflight can take additional bounded time. Timeout/output-limit states retain valid partial observations and remain non-success states. Default: 60.
+
+### --rate RATE
+
+Adapter rate from 1 through 100. Applied as native rate/delay or conservative concurrency where supported. Some engines have no exact requests-per-second flag; inspect the adapter guide rather than assuming a universal wire-level cap. Default: 10.
+
+### --limit LIMIT
+
+Selection/result ceiling from 1 through 10000. Applies to bounded host input and normalized output; it is not a promise of that many results. Large default-all selections are rejected rather than silently exceeding the requested ceiling. Default: 1000.
+
+### --resolvers RESOLVERS
+
+Text file of DNS resolver IP addresses, one per line; blank lines and comments are accepted by the built-in scan reader. Use resolvers reachable from the relevant public/private network. Resolver responsiveness does not prove trustworthiness. No resolver list is downloaded automatically.
+
+### --trusted-resolvers TRUSTED_RESOLVERS
+
+File of explicitly trusted resolver IP addresses for independent answer comparison. Required with PureDNS and ShuffleDNS adapters. Built-in DNS evidence compares against the first configured trusted resolver and preserves agreement/disagreement; this is not local DNSSEC validation.
+
+### --import-file IMPORT_FILE
+
+Existing compatible engine JSONL export. Required for Amass, whose adapter imports results rather than executing Amass v5. Also supports BBOT export import. File must be at most 8 MiB; records outside the root are ignored. An import is historical evidence, not fresh network validation.
+
+### --permutations PERMUTATIONS
+
+Existing reviewed dictionary used by Gotator to generate mutations from selected seeds. This is not the list of hostnames to resolve. Required for the Gotator adapter; file must be at most 8 MiB. Generated names are candidates until independently validated.
+
+**Examples**
+
+```text
+atlas engine httpx RUN --serial 1-3 --authorized --rate 10
+atlas engine puredns RUN --serial 1-3 --authorized --resolvers resolvers.txt --trusted-resolvers trusted.txt
+atlas engine gotator RUN --serial 1 --authorized --permutations tokens.txt
+atlas engine amass RUN --authorized --import-file amass.jsonl
+```
+
+## Command: source
+
+Collect one bounded complementary passive Common Crawl page and save historical scoped candidate evidence. No target website probing occurs in this command. A useful result normally has partial coverage and may exit 1; inspect its saved inventory and source state rather than assuming no data was retained.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### NAME
+
+Only commoncrawl is currently enabled. It queries the official index catalog and one bounded latest-crawl response. SecurityTrails and Censys are disabled in this free-only edition; supplying credentials does not re-enable them. Required. Choices: commoncrawl.
+
+### -d, --domain DOMAIN
+
+DNS root to enumerate or import, for example example.com. Supply a hostname, not a URL, port, path or IP address. International names are normalized to IDNA. Root and descendant boundaries are enforced; evilexample.com is not part of example.com. Required.
+
+### --limit LIMIT
+
+Normalized-host ceiling from 1 through 10000; the requested latest-index page size is capped at 1000. One page/latest crawl is partial coverage, not the entire historical archive. Default: 1000.
+
+### --timeout TIMEOUT
+
+Per provider HTTP operation timeout in whole seconds from 1 through 600. The catalog request and index request are separate operations; this is not a total command deadline. Default: 10.
+
+### -o, --output OUTPUT
+
+Parent for a new candidate inventory run and its indexed evidence. Names from historical URLs remain passive-unverified. A partial result can return exit status 1 while preserving useful names. Default: results.
+
+**Examples**
+
+```text
+atlas source commoncrawl -d example.com --limit 100 --timeout 10 -o results
+```
+
+## Command: owner-import
+
+Import an explicitly authorized DNS JSON export from AWS Route53, Cloudflare or Google Cloud. This performs no cloud login, account enumeration, API writes or automatic probes. Complete export pagination before import. Configured wildcard patterns and public/private provenance remain in evidence.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### PROVIDER
+
+Official DNS export shape: aws/route53 reads ResourceRecordSets, cloudflare reads result, and gcp reads rrsets; compatible arrays are accepted. route53 aliases aws. This selects a JSON parser, not a cloud login or API account. Required. Choices: aws, route53, cloudflare, gcp.
+
+### FILE
+
+Existing UTF-8 JSON export no larger than 16 MiB. Complete provider pagination yourself before exporting; ATLAS does not fetch missing cloud pages. Configured wildcard patterns are retained and labeled rather than treated as proof of an arbitrary concrete hostname. Required.
+
+### -d, --domain DOMAIN
+
+DNS root to enumerate or import, for example example.com. Supply a hostname, not a URL, port, path or IP address. International names are normalized to IDNA. Root and descendant boundaries are enforced; evilexample.com is not part of example.com. Required.
+
+### --authorized
+
+Explicitly acknowledge permission to perform this operation within its configured scope. This does not obtain permission from a domain owner. Required for active scans, availability checks, engine actions, owner imports and crawling, and for recovery of active work where applicable. Default: off.
+
+### --view VIEW
+
+Separate public and private DNS observation contexts. This marks inventory provenance; it does not automatically connect to a VPN or select a private DNS server. Stable asset identities include the view. Diff requires matching views. Choices: public, private. Default: private.
+
+### --limit LIMIT
+
+Maximum exported records processed, from 1 through 10000. An export exceeding the limit is marked partial. A record ceiling differs from the final number of distinct names after normalization/deduplication. Default: 10000.
+
+### -o, --output OUTPUT
+
+Parent for a new owner-import inventory. Public/private view is recorded and probe_allowed=false is retained in import evidence. Importing itself makes no cloud requests, DNS probes or zone writes. Default: results.
+
+**Examples**
+
+```text
+atlas owner-import route53 zone.json -d example.com --authorized --view private
+atlas owner-import cloudflare zone.json -d example.com --authorized --view public
+```
+
+## Command: watch
+
+Keep a foreground process collecting snapshots and comparing them with a previous saved run. This is change monitoring, not a hidden scheduler or a promise of complete coverage. Default one cycle; use two for a fresh baseline/comparison or zero to continue until interrupted. Notifications are off unless explicitly enabled.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### -d, --domain DOMAIN
+
+DNS root to enumerate or import, for example example.com. Supply a hostname, not a URL, port, path or IP address. International names are normalized to IDNA. Root and descendant boundaries are enforced; evilexample.com is not part of example.com. Required.
+
+### --sources SOURCES
+
+Comma-separated passive-source list passed to each underlying scan. The default focuses on Cert Spotter and Subfinder. Each cycle still respects provider availability and quotas; missing tools do not create complete negative evidence. Default: certspotter,subfinder.
+
+### --interval INTERVAL
+
+Seconds to sleep between completed cycles; minimum 10. Scan runtime is additional, so this is not a promise of an exact wall-clock start schedule. The process must stay running; this command does not install a system service or scheduler. Default: 300.
+
+### --cycles CYCLES
+
+Number of snapshots to collect; 1 runs once without waiting for a second cycle, 2 enables a first comparison, and 0 runs continuously until interrupted. Negative values are rejected. A saved previous snapshot can also serve as the baseline on a later invocation. Default: 1.
+
+### --mode MODE
+
+Underlying scan mode for every cycle. passive collects sources/imports; active adds built-in DNS generation and requires --authorized. Watch does not accept every scan-specific flag: run an explicit scan for custom wordlists/profile/budget choices. Choices: passive, active. Default: passive.
+
+### --authorized
+
+Explicitly acknowledge permission to perform this operation within its configured scope. This does not obtain permission from a domain owner. Required for active scans, availability checks, engine actions, owner imports and crawling, and for recovery of active work where applicable. Default: off.
+
+### --offline
+
+Skip passive network-source collection. This is not a universal network-disconnect switch: explicitly selected active DNS, HTTP, engine or availability actions can still make requests. For a network-free import rehearsal, keep passive mode and do not add --check-live. Default: off.
+
+### --import IMPORTS
+
+Import an existing evidence file; repeat --import for multiple files. Supported input includes hostname text, URLs, certificate-style wildcard names and compatible JSON/JSONL records. Hostnames are normalized, deduplicated and scope-filtered. Imported names remain unverified until checked. Default: none. Repeatable.
+
+### -o, --output OUTPUT
+
+Parent of snapshot run directories and watch-ROOT.json. Existing matching state is reused for the previous snapshot, notification digest and pending outbox. Keep those files together when moving a watch workspace. Default: results.
+
+### --notify
+
+Explicitly send meaningful comparison changes through installed Notify using --notify-config. No messages are sent by default. Requires at least a baseline and a later snapshot for new differences. Successful process completion is not independently verified message delivery. Default: off.
+
+### --notify-config NOTIFY_CONFIG
+
+Existing Notify provider configuration file, at most 8 MiB. Required with --notify. Provider credentials belong in this file, not command arguments or public reports. Notify is a separate optional engine, not one of the seven automatically installed engines.
+
+### --incremental
+
+Carry forward compatible previous assets and the saved CT issuance cursor into the next cycle. Old retained observations are historical evidence, not fresh availability checks. Incremental collection improves continuity but does not guarantee exhaustive archive coverage. Default: off.
+
+### --retry-notifications
+
+Reset attempt counts and retry times for retained pending outbox messages. Actual delivery still requires --notify and --notify-config. The outbox retains at most 1000 messages, processes at most three per cycle, and normally stops retrying a message after eight attempts with bounded exponential backoff. Default: off.
+
+**Examples**
+
+```text
+atlas watch -d example.com --cycles 2 --interval 300
+atlas watch -d example.com --cycles 0 --interval 300 --incremental
+atlas watch -d example.com --offline --import names.txt --cycles 2 --interval 10
+atlas watch -d example.com --cycles 2 --notify --notify-config notify.yaml
+```
+
+## Command: resolver-check
+
+Perform bounded DNS connectivity/positive-negative response diagnostics against an explicit resolver list. The output can help explain empty or uncertain active scans, but responsiveness is not trustworthiness. No external resolver is silently appended.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### --resolvers RESOLVERS
+
+Required file containing at most 50 resolver IP addresses. For each resolver query example.com and a random .invalid name to test connectivity/positive-negative behavior. This deliberately sends DNS queries; it does not establish trust or DNSSEC validity. Required.
+
+### --timeout TIMEOUT
+
+Per DNS-attempt timeout from 1 through 10 seconds. Diagnostics use rate 5 and a shared 200-query ceiling. Output includes responses, states and latency; a server answering both diagnostics is responsive, not automatically trustworthy. Default: 3.
+
+**Examples**
+
+```text
+atlas resolver-check --resolvers resolvers.txt --timeout 3
+```
+
+## Command: crawl
+
+Make explicitly authorized, bounded same-root HTTP requests and extract candidate names from HTML/JavaScript/CSP evidence. Start with selected saved hosts. Addresses are validated and pinned while preserving Host/TLS SNI; redirects/links are separately scope checked. Foreign names can be recorded as relationship evidence but do not become automatic probe targets.
+
+### -h, --help
+
+Print usage and the supported arguments for this command, then exit without starting the operation. Use atlas COMMAND --help for command-specific help.
+
+### DIRECTORY
+
+Saved ATLAS run directory containing summary.json and assets.jsonl, or a checkpoint.json for discovery recovery. Use the exact directory printed by an earlier operation, not just its parent results directory. Required.
+
+### --serial SERIAL
+
+Initial saved-host selection: one SR NO, comma-separated values, inclusive ranges, or all, with at most 100 selected assets. There is no crawl --find flag. The queue begins at HTTPS / for each selected hostname; results are scope-filtered candidate names. Default: 1.
+
+### --authorized
+
+Explicitly acknowledge permission to perform this operation within its configured scope. This does not obtain permission from a domain owner. Required for active scans, availability checks, engine actions, owner imports and crawling, and for recovery of active work where applicable. Default: off.
+
+### --requests REQUESTS
+
+Maximum fetched responses, from 1 through 1000, shared across the crawl. Blocked/unresolved candidates are recorded separately. Each response body is capped at 256 KiB and request starts are paced at 5 per second. Default: 20.
+
+### --depth DEPTH
+
+Link/redirect queue depth from 0 through 3. Zero fetches initial pages only; one can enqueue immediate links and redirects. Every destination is separately checked against the root, exclusions and address policy; this is not unrestricted redirect following. Default: 1.
+
+### --timeout TIMEOUT
+
+Per DNS/connect/HTTP operation timeout from 1 through 30 seconds. A single URL can involve more than one bounded operation. TLS certificate validation remains enabled. Default: 5.
+
+### --allow-private
+
+Explicitly allow this operation on an inventory marked private. Lookup/check/engine commands otherwise reject private-view inventories. For crawl, this also permits non-global destination addresses; it does not expand the saved hostname scope or remove exclusions. Default: off.
+
+### --max-seconds MAX_SECONDS
+
+Total crawl elapsed ceiling from 1 through 3600 seconds, checked between queued requests. In-flight operations can extend beyond the boundary. Output distinguishes retained candidates and pending URLs; a deadline is not proof that no further links exist. Default: 300.
+
+**Examples**
+
+```text
+atlas crawl RUN --serial 1-3 --authorized --requests 20 --depth 1 --timeout 5
+atlas crawl PRIVATE_RUN --serial 1 --authorized --allow-private --requests 5 --depth 0
+```
+
+## Interactive menu: all choices
+
+Menus are terminal workflows, not graphical screens. Saved results are numbered from 1 and exclude the apex. Authorization prompts do not establish owner permission. Advanced wizards expose common settings; the named commands expose all flags.
+
+### 0 - Exit
+
+Close the menu. Already saved runs remain on disk; this does not delete evidence.
+
+### 1 - Passive discovery
+
+Ask for a root, collect passive providers and offer lookup after showing results. Evidence is not automatically DNS-verified.
+
+### 2 - Active DNS + wordlist
+
+Ask for root, authorization and an optional wordlist path. Press Enter for the starter list. Uses quick profile, a 30-second external-tool limit and a 3-second DNS timeout; progress and confirmed DNS names print during checking. yes is accepted case-insensitively for the active prompt.
+
+### 3 - Active DNS + permutations + HTTP
+
+Use option 2 settings and additionally enable AlterX --permute, --http and --free-engines. DNSx/HTTPx/TLSx save evidence; HTTP responses populate UP in the list. Mutation candidates alone are not discoveries or uptime proof.
+
+### 4 - Dependency doctor
+
+Show common executable locations and Python dependencies. It does not install anything.
+
+### 5 - Command help
+
+Print top-level command usage. Use COMMAND --help outside the menu for a specific flag list.
+
+### 6 - View saved results
+
+Prompt for a saved run path and open the full-list browser with refresh/search/lookup/save controls.
+
+### 7 - Check all discovered subdomains
+
+Prompt for an existing run and authorization, then create a new background-checked run. It does not enumerate unrelated domains.
+
+### 8 - Save full domain list
+
+Prompt for the saved run and a destination file. Write one hostname per line; existing files are protected. Use export --format/--force directly for other formats or replacement.
+
+### 9 - Discover + check every result
+
+Collect passive names for the entered root, require authorization for subsequent checks and create a checked run. It does not enable wordlist/permutation discovery by itself.
+
+### 10 - WHOIS / IP / reverse IP by SR NO
+
+Prompt for a saved run, show its numbered list and choose one hostname. Lookup submenu: 1 WHOIS/RDAP; 2 IP/ASN/DNS; 3 reverse-IP/PTR/saved shared addresses; 4 all; q return.
+
+### 11 - Unified evidence cards
+
+Prompt for a saved run and a serial/batch, then show saved evidence without refreshing remote services.
+
+### 12 - Provider health / budgets
+
+Prompt for a saved run and display recorded source stages, coverage and available telemetry.
+
+### 13 - Compare saved runs
+
+Prompt for old/new directories. Root and DNS view must match; absent results are not automatically treated as deletions.
+
+### 14 - Asset history
+
+Prompt for hostname and SQLite database. Enter accepts results/atlas.sqlite3 as the database path.
+
+### 15 - Resume interrupted discovery
+
+Prompt for the saved run and authorization if needed, recover under original input/budget constraints, and suppress the post-recovery lookup offer. Use resume --allow-private directly when private recovery requires it.
+
+### 16 - Repository engine
+
+Prompt for an adapter, run directory, serial selection, authorization and certain required files. For complete configuration/private-view flags use the named engine command.
+
+### 17 - Engine versions / requirements
+
+Run engines --check. A version response is a diagnostic, not proof of every live engine feature.
+
+### 18 - Import owned cloud DNS export
+
+Prompt for provider, JSON file, root, view and authorization. View defaults private. No automatic cloud network access or probes occur.
+
+### 19 - Watch / change snapshots
+
+Prompt for root, cycles and interval. Defaults one passive cycle and 300 seconds between completed cycles. Configure notification/incremental/active options with watch directly.
+
+### 20 - Resolver diagnostics
+
+Prompt for resolver-IP file and run bounded connectivity checks. This sends DNS requests and does not certify resolver trust.
+
+### 21 - Scoped HTTP/JS/CSP discovery
+
+Prompt for saved run, serials and authorization; use default bounded crawl settings. For private destinations and custom limits use crawl directly.
+
+### 22 - Install / repair free engine bundle
+
+Run setup-engines for all seven managed binaries. This downloads pinned releases when absent/mismatched and reuses verified existing installations. No target enumeration is performed by setup.
+
+## Viewer and lookup controls
+
+browse: r rereads saved data; s sets a hostname substring search; l enters single-SR-NO lookup; w exports all discovered hostnames from that run; q returns. The browse export is the full run list, not only the current search view. No pagination is required; use terminal scrollback.
+
+lookup: select a positive integer serial, then choose 1 WHOIS/RDAP, 2 IP/ASN/DNS, 3 reverse-IP/PTR/local correlation, or 4 all. q leaves selection. Interactive lookup uses defaults; use an explicit --serial with named flags for private view or custom settings.
+
+Post-scan: l enters lookup for the just-displayed run, Enter finishes. --lookup forces the offer; --no-lookup suppresses it. Evidence/engine/crawl batch syntax supports commas/ranges where documented; lookup --serial accepts only one integer.
+
+Always select from the same run and hostname filter you displayed. Serials are presentation order, not persistent asset IDs. A filter can renumber rows. Stable asset IDs include normalized root, hostname and public/private view.
+
+## Engine modes and free-service policy
+
+Automatic seven-engine bundle: Subfinder and Findomain for passive root discovery; DNSx for DNS evidence; AlterX for candidate generation; HTTPx for HTTP metadata/response status; TLSx for certificate/TLS metadata; Katana for explicitly selected-host crawling. Setup installs binaries, not unlimited upstream-service access.
+
+Additional manual adapters: Assetfinder (passive), PureDNS/MassDNS/ShuffleDNS (DNS), Gotator (generation), BBOT 3.x (curated passive recursive profile or JSONL import), Notify (explicit change delivery), BadDNS (one-host CNAME investigation). Amass is compatible JSONL import only. Chaos is disabled even if credentials exist.
+
+PureDNS and ShuffleDNS require MassDNS and both resolver files. MassDNS requires its resolver file. Gotator requires a mutation dictionary. BBOT live mode requires detected version 3.x and does not install module dependencies. BadDNS accepts one selected hostname. Notify delivery requires the dedicated watch consent/configuration flow.
+
+Subfinder/Assetfinder/Findomain query the saved root rather than restricting API enumeration to a selected serial. Other adapters use bounded selected input. Foreign SANs, CNAME targets and redirects can remain relationship evidence without becoming automatic probe targets.
+
+Censys and SecurityTrails source integrations are disabled. Subfinder is restricted to keyless sources and Findomain excludes account/paid sources. Public services still impose quotas, availability limits and terms. ATLAS does not promise that every optional engine is installed or every upstream endpoint always works.
+
+Explicit adapter bounds: 1..100 rate, up to 600 seconds wall time, 1..10000 selected/result hosts, 8-MiB configuration/structured-output budgets and periodic process limits. Individual engines may issue additional internal requests. TLSx full JSON retains SAN/CN identity without combining incompatible -san/-cn output flags with probe flags.
+
+## DNS and HTTP state meanings
+
+### passive-unverified / NOT CHECKED
+
+Observed in a source/import but not validated by this inventory. It is not evidence of a running service.
+
+### resolved / DNS OK
+
+Usable address evidence is present without detected wildcard overlap or explicit trusted disagreement. Another record type can still fail; its error is preserved. DNS existence is not HTTP uptime.
+
+### wildcard-suspect / REVIEW
+
+A candidate overlaps random sibling answer signatures. It is retained for review; shared/rotating infrastructure can cause false positives or negatives.
+
+### unresolved / NO DNS
+
+No usable response was obtained under the completed DNS checks. A negative response is contextual evidence at that time, not proof of permanent deletion.
+
+### indeterminate / DNS ERROR
+
+Errors, trusted disagreement, CNAME-only data or other uncertainty prevent a clean address classification. Inspect DNS evidence; do not count it as confirmed absence.
+
+### UP
+
+An HTTP response was received. Redirects and errors such as 301, 403 and 404 count as responses; this does not mean the application is healthy or accessible to all clients.
+
+### NO_RESPONSE / NO RESPONSE
+
+The completed HTTP checks recorded no response. Routing, timeouts, TLS problems, filtering and non-web services are possible; downtime is not proved.
+
+### DNS_ONLY / DNS ONLY
+
+Address evidence exists and HTTP was deliberately not checked.
+
+### CHECK_ERROR / CHECK ERROR
+
+Availability checking encountered uncertainty rather than a conclusive negative result.
+
+### PENDING / CHECKING
+
+A background check has not completed. Resume can continue pending rows.
+
+## Resolver behavior and evidence limits
+
+Built-in DNS uses configured system servers unless an explicit resolver file is supplied. Transport/server failures can retry through up to three configured resolvers; a working server is preferred. Definitive ANSWER/NODATA/NXDOMAIN is not retried against another server. No public resolver is silently appended.
+
+Positive/negative cache lifetimes follow DNS TTL/SOA evidence. Repeated resolver failures can trigger temporary quarantine and conservative rate adaptation. Resolver attempts, errors, RCODE, record type, TTL, timestamp and optional trusted comparison are retained. A resolver AD bit is an assertion from that resolver, not ATLAS local DNSSEC validation.
+
+NXDOMAIN and NODATA differ from timeout, SERVFAIL, REFUSED, CNAME-only data and unknown errors. Do not equate an empty result with a complete successful scan. Generated negative guesses are not all promoted into the discovered asset list; candidates.txt and resolver/stage evidence explain the work performed.
+
+## Files and persistent storage
+
+### subdomains.txt
+
+One discovered subdomain per line, excluding the apex. Suitable for a clean hostname list.
+
+### resolved.txt
+
+Saved DNS-resolved names without detected wildcard overlap; can include the root apex because this is a DNS evidence artifact rather than the displayed subdomain list.
+
+### assets.jsonl / assets.csv
+
+Saved inventory, provenance and machine DNS states. JSONL retains nested DNS/HTTP/TLS/review evidence. Display/export serials refer to ordered subdomains.
+
+### summary.json / report.txt
+
+Run settings, source outcomes, counts, state and a plain-text snapshot. The terminal report reads saved structured files; it is not a live refresh of the target.
+
+### manifest.json / checkpoint.json
+
+Original configuration/input hashes and recoverable progress, including completed source/active stages and carried elapsed/query budgets. Do not edit these to bypass resume validation.
+
+### raw/ / candidates.txt / seeds.txt / wildcards.json
+
+Provider/tool artifacts, generated guesses, mutation input and random-sibling evidence. A candidate or raw archive hit is not automatically a verified discovered host. Raw files can contain sensitive scope information.
+
+### engines/ / httpx-result.json
+
+Bounded engine states, normalized observations and known-schema metadata. Arbitrary headers/bodies/private keys are not copied into structured engine evidence. Legacy raw discovery logs and imported files have their own contents.
+
+### availability.csv / up.txt
+
+Checked-run availability records and the subset with HTTP responses. Background checks create a new checked directory and keep the discovery input unchanged.
+
+### lookups/ / lookups/cache/
+
+Timestamped lookup results and successful-provider response caches. RDAP/WHOIS records can include contact/registration data; review before sharing.
+
+### atlas.sqlite3 and WAL sidecars
+
+Shared inventory in the output parent unless overridden. Stores run/asset history and stable view-separated identities. Keep sidecars together while open; allow applications to close before copying a database snapshot.
+
+### watch-ROOT.json / diff.json / notification artifacts
+
+Persistent previous snapshot/outbox state, comparisons and bounded delivery results. Keep the watch workspace intact if restarting a monitor.
+
+### ~/.atlas/engines/PLATFORM/bin/
+
+Managed binaries and adjacent .atlas.json hash/license/version records. ATLAS prepends this directory only to its process PATH. ATLAS_ENGINE_HOME changes the base directory.
+
+## Environment
+
+### ATLAS_COLOR
+
+auto, always or never color policy. Launchers normally choose always for interactive menus. Use never for plain logs; command-level --color overrides the value except in the standalone setup handler.
+
+### NO_COLOR
+
+Presence disables automatic terminal color and prevents the normal menu from forcing color automatically. An explicit ATLAS_COLOR=always or --color always can still force ANSI output. Use ATLAS_COLOR=never for an explicit plain-output policy, and remove NO_COLOR when testing normal automatic menu color.
+
+### ATLAS_ENGINE_HOME
+
+Override the managed-engine base folder. The default is ~/.atlas/engines, with platform-specific bin subfolders. Affects setup and automatic executable lookup; it does not change run output storage.
+
+### ATLAS_SKIP_ENGINES
+
+Set to 1 before install.sh/install-windows.cmd to install only the core package and skip the default seven-engine download. This is an installer setting, not a command to remove existing engines.
+
+### PATH
+
+Used for optional executables and optional figlet. ATLAS prepends its managed engine bin directory within the process, avoiding manual global PATH edits and accidental selection of Python httpx over the managed Go executable.
+
+### MANPATH
+
+Linux manual search path. If needed include ~/.local/share/man while preserving system defaults, for example MANPATH="$HOME/.local/share/man:" man atlas.
+
+## Exit statuses and partial work
+
+0: the command completed under its own success rules. A read-only report can succeed even if it displays a previously failed stage; optional discovery tools can be explicitly skipped. Watch completion does not assert that every provider on every nested snapshot was exhaustive.
+
+1: scan/provider/engine failure, partial/incomplete provider or lookup evidence, or free-bundle install failure, depending on the command. Useful records may have been saved. Common Crawl intentionally labels its bounded latest-page coverage partial. Inspect stage state and saved paths instead of discarding output.
+
+2: bad arguments, unsupported configuration/platform, invalid scope/serials, missing protected files, or another input/configuration failure. Argparse also uses 2 for invalid usage. setup-engines returns 2 for unknown subset names before installing.
+
+130: interrupted discovery/workflow where handled. Saved discovery/check checkpoints can retain partial progress. Unhandled low-level process/IO failures can use standard Python nonzero exits; there is no promise that every exception maps to one of these codes.
+
+## Troubleshooting
+
+atlas not recognized in PowerShell: from the repository run .\atlas.cmd; from the task workspace run .\outputs\atlas-recon\atlas.cmd. Run install-windows.cmd first if the Python environment is missing. A launcher path is not automatically a global command.
+
+Old behavior after an upgrade: close older running menus and restart a fresh launcher. A process that already imported the previous version does not automatically reload changed source. Confirm atlas --version.
+
+Active options appear idle: check the printed source/DNS stage. Menu 2/3 use quick collection, 30-second tool and 3-second DNS timeouts; an explicit CLI scan without those settings can wait much longer. Provider timeouts do not invalidate every other source. Keep watching DNS progress or interrupt to preserve a partial report.
+
+No active DNS evidence: check resolver-check using reachable DNS servers, VPN/router configuration and health RUN. No server replies is a network/DNS failure, not proof that no subdomains exist. Supply --resolvers FILE when appropriate; ATLAS does not silently bypass your network with public fallback DNS.
+
+No mutation/HTTP results: confirm setup-engines and engines --check, active mode, authorization, candidate budget and input seeds. AlterX output is candidate generation; HTTP enrichment requires resolved eligible hosts. A failed/partial engine state is not the same as a complete empty result.
+
+Empty filtered report or invalid SR NO: remove filters, inspect the same saved run, then repeat the identical --find filter before selecting. The apex is not numbered. Evidence/engine/crawl batches have different maximums; lookup accepts a single serial.
+
+Protected file already exists: choose a new export/diff/lookup filename. Only export offers --force. Setup failures can be retried; verified installed binaries are reused and mismatched binaries are repaired.
+
+Resume rejected: restore original wordlist/resolver/import files and saved scope, or start a new scan. Do not edit manifests to enlarge budgets. For private saved inventories use the explicit named-command --allow-private flag where required.
+
+Manual missing after update: rerun the installer or read man -l man/atlas.1 directly. Windows users can open docs/MANUAL.md. The source man/atlas.1 and packaged atlas_data/atlas.1 are synchronized by scripts/build-man.py.
+
+## See also
+
+README.md; docs/ENGINES.md for exact adapter behavior; docs/UPGRADE-2.md; docs/BENCHMARK.md and VALIDATION.md for validation limits; THIRD_PARTY.md for separate dependency licenses.
+
+Subfinder, Findomain, DNSx, AlterX, ProjectDiscovery HTTPx, TLSx and Katana upstream documentation. No external tool is relicensed by ATLAS, and no scan guarantees every subdomain or confirms an exploitable vulnerability.

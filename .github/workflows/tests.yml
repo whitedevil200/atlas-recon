@@ -19,6 +19,20 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install --require-hashes -r requirements-runtime.lock
+      - name: Complete manual coverage and synchronized copies
+        run: python scripts/build-man.py --check
+      - name: Render Linux man page and reject roff warnings
+        if: runner.os == 'Linux' && matrix.python == '3.13'
+        shell: bash
+        run: |
+          if ! command -v groff >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y groff-base
+          fi
+          groff -Tutf8 -man -ww man/atlas.1 > /tmp/atlas-man.txt 2> /tmp/atlas-man-warnings.txt
+          cat /tmp/atlas-man-warnings.txt
+          test ! -s /tmp/atlas-man-warnings.txt
+          test -s /tmp/atlas-man.txt
       - run: python -m unittest discover -s tests -v
       - name: Install and verify free engines (no target scans)
         if: matrix.python == '3.13'
